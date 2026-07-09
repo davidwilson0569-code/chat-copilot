@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Camli · Chat Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --olive:#1a1f16;--olive-2:#222a1d;--olive-3:#2c3626;--line:#3a462f;
+    --cream:#F4F1E7;--cream-dim:#c9c8ba;--lime:#c8e656;--lime-ink:#1a1f16;
+    --amber:#e8b13a;--red:#e0685a;--blue:#7fb2d6;--radius:10px;
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--olive);color:var(--cream);line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--lime)}
+  button{font-family:var(--sans)}
+
+  header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,var(--olive-2),var(--olive));position:sticky;top:0;z-index:20;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:11px}
+  .logo .dot{width:12px;height:12px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 4px rgba(200,230,86,.15)}
+  .logo b{font-size:16px;letter-spacing:.5px}
+  .logo span{font-family:var(--mono);font-size:11px;color:var(--cream-dim);text-transform:uppercase;letter-spacing:2px}
+  .hdr-spacer{flex:1}
+  .hdr-control{display:flex;align-items:center;gap:8px}
+  .hdr-control label{font-family:var(--mono);font-size:11px;color:var(--cream-dim);text-transform:uppercase;letter-spacing:1px}
+  select,input[type=text]{background:var(--olive-3);color:var(--cream);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px}
+  select:focus,input:focus,textarea:focus{outline:2px solid var(--lime);outline-offset:1px}
+
+  main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 22px;max-width:1400px;margin:0 auto;align-items:start}
+  .panel{background:var(--olive-2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .panel-hd{padding:11px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;
+    font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--cream-dim)}
+  .panel-hd .num{background:var(--olive-3);color:var(--lime);border:1px solid var(--line);width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:600}
+  .panel-bd{padding:16px}
+
+  .modes{display:flex;gap:6px;background:var(--olive-3);border:1px solid var(--line);border-radius:9px;padding:4px}
+  .modes button{flex:1;background:transparent;border:0;color:var(--cream-dim);padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+  .modes button.on{background:var(--lime);color:var(--lime-ink)}
+  .modes button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+
+  label.field{display:block;margin:14px 0 6px;font-size:12px;color:var(--cream-dim);font-weight:600}
+  textarea{width:100%;background:var(--olive);color:var(--cream);border:1px solid var(--line);border-radius:9px;padding:11px 12px;
+    font-family:var(--mono);font-size:13px;resize:vertical;line-height:1.55}
+  textarea#transcript{min-height:230px}
+  textarea#mydraft{min-height:150px}
+  .hint{font-size:11.5px;color:var(--cream-dim);margin-top:5px;font-family:var(--mono)}
+
+  .go{margin-top:16px;width:100%;background:var(--lime);color:var(--lime-ink);border:0;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:.15s}
+  .go:hover{filter:brightness(1.05)}
+  .go:focus-visible{outline:3px solid var(--cream);outline-offset:2px}
+
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .badge{font-family:var(--mono);font-size:11px;letter-spacing:.5px;padding:5px 10px;border-radius:20px;border:1px solid var(--line);background:var(--olive-3);color:var(--cream-dim)}
+  .badge.type{background:rgba(127,178,214,.14);border-color:#3d5566;color:var(--blue)}
+
+  .tpl{background:var(--olive);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:9px;padding:13px 14px;margin-bottom:11px}
+  .tpl h4{margin:0 0 8px;font-size:13px;color:var(--cream)}
+  .tpl .body{white-space:pre-wrap;font-size:14px;line-height:1.6}
+  .tpl .ph{background:rgba(232,177,58,.18);border:1px dashed var(--amber);color:var(--amber);border-radius:5px;padding:0 5px;font-family:var(--mono);font-size:12.5px;font-weight:600}
+  .copy{margin-top:10px;background:var(--olive-3);color:var(--cream);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+  .copy:hover{border-color:var(--lime)}
+  .copy.done{background:var(--lime);color:var(--lime-ink);border-color:var(--lime)}
+
+  .subhead{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--cream-dim);margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+  .subhead::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .rail{display:flex;flex-direction:column;gap:8px}
+  .flag{display:flex;gap:10px;align-items:flex-start;border-radius:9px;padding:10px 12px;font-size:12.8px;line-height:1.45;border:1px solid}
+  .flag .ic{flex-shrink:0;font-weight:700;font-family:var(--mono)}
+  .flag.amber{background:rgba(232,177,58,.09);border-color:#6a5320;color:#f0d79a}
+  .flag.amber .ic{color:var(--amber)}
+  .flag.red{background:rgba(224,104,90,.1);border-color:#7a3830;color:#f3b3aa}
+  .flag.red .ic{color:var(--red)}
+  .flag.good{background:rgba(200,230,86,.08);border-color:#4c5a2c;color:#dce9a8}
+  .flag.good .ic{color:var(--lime)}
+
+  .empty{color:var(--cream-dim);font-size:13.5px;text-align:center;padding:34px 12px;font-family:var(--mono)}
+
+  .clean-out{background:var(--olive);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:9px;padding:13px 14px;white-space:pre-wrap;font-size:14.5px;line-height:1.6}
+
+  .tools{max-width:1400px;margin:0 auto 30px;padding:0 22px;display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .cat-label{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--blue);margin:14px 0 6px}
+  .cat-label:first-child{margin-top:0}
+  .lib-item{border:1px solid var(--line);border-radius:9px;margin-bottom:8px;overflow:hidden;background:var(--olive)}
+  .lib-q{padding:10px 12px;cursor:pointer;font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .lib-q:hover{background:var(--olive-3)}
+  .lib-a{padding:0 12px 12px;font-size:13px;color:var(--cream-dim);white-space:pre-wrap;display:none}
+  .lib-a.open{display:block}
+
+  #gdsOut{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .seg-card{background:var(--olive);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;padding:10px 12px;font-size:13.5px}
+  .seg-card .r{font-weight:600}
+  .seg-card .m{font-family:var(--mono);font-size:12px;color:var(--cream-dim);margin-top:3px}
+
+  .akb{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .akb-row{padding:9px 12px;border-top:1px solid var(--line)}
+  .akb-row:first-child{border-top:0}
+  .akb-t{font-weight:600;color:var(--lime);font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;margin-bottom:2px}
+  .akb-d{color:var(--cream);font-size:13px;line-height:1.5}
+  footer{border-top:1px solid var(--line);padding:16px 22px;color:var(--cream-dim);font-size:12px;font-family:var(--mono);text-align:center}
+
+  @media (max-width:900px){main,.tools{grid-template-columns:1fr}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="dot"></span><b>Chat Copilot</b><span>Agent Assist</span></div>
+  <div class="hdr-spacer"></div>
+  <div class="hdr-control"><label for="brand">Brand</label>
+    <select id="brand"><option value="Camli">Camli</option><option value="CheapTicketsDeal">CheapTicketsDeal</option></select>
+  </div>
+  <div class="hdr-control"><label for="agent">Agent</label>
+    <input type="text" id="agent" placeholder="Your name" style="width:120px" /></div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="panel-hd"><span class="num">1</span> The chat</div>
+    <div class="panel-bd">
+      <div class="modes" role="tablist">
+        <button id="mFind" class="on" role="tab">🔎 Find the reply</button>
+        <button id="mClean" role="tab">🩹 Clean my draft</button>
+        <button id="mAI" role="tab">🤖 AI draft</button>
+      </div>
+
+      <div id="findWrap">
+        <label class="field" for="transcript">Paste the chat (or just the customer's question)</label>
+        <textarea id="transcript" placeholder="Customer: does Delta charge for a checked bag?"></textarea>
+        <div class="hint">The tool reads it, spots the question type, and pulls the right honest answer.</div>
+        <button class="go" id="findBtn">Find the reply</button>
+      </div>
+
+      <div id="cleanWrap" style="display:none">
+        <label class="field" for="mydraft">Your draft reply</label>
+        <textarea id="mydraft" placeholder="Type what you were about to send. I'll fix typos, spacing and capitalisation, and flag anything risky."></textarea>
+        <div class="hint">Mechanical cleanup + honesty check. It won't invent facts or rewrite your meaning.</div>
+        <button class="go" id="cleanBtn">Clean it up</button>
+      </div>
+
+      <div id="aiWrap" style="display:none">
+        <label class="field" for="aitext">Paste the chat (customer question + context)</label>
+        <textarea id="aitext" style="min-height:150px" placeholder="Paste the conversation. Personal details are masked before anything is sent."></textarea>
+        <label class="field" for="aiintent">What do you want to say? <span style="font-weight:400;color:var(--cream-dim)">(optional)</span></label>
+        <textarea id="aiintent" style="min-height:56px" placeholder="e.g. answer the pet-in-cabin question, then offer to quote"></textarea>
+        <button class="go" id="aiPrevBtn">Mask &amp; preview</button>
+        <div id="aiSendZone" style="display:none;margin-top:14px">
+          <label class="field" for="aisend">This is exactly what gets sent — nothing else leaves your browser. Edit out anything personal that slipped through:</label>
+          <textarea id="aisend" style="min-height:130px"></textarea>
+          <button class="go" id="aiSendBtn" style="background:var(--blue)">Draft with Groq AI</button>
+        </div>
+        <div class="hint" style="margin-top:10px">Masking catches emails, phones, cards and booking IDs. The preview is your final check for names inside sentences. The AI drafts phrasing only — every fee stays a 「VERIFY」 you fill from the GDS.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-hd"><span class="num">2</span> <span id="outHd">Suggested reply</span></div>
+    <div class="panel-bd" id="out">
+      <div class="empty" id="emptyState">Paste a chat and hit the button.<br>Matching answers and honesty checks appear here.</div>
+    </div>
+  </section>
+</main>
+
+<section style="max-width:1400px;margin:0 auto 18px;padding:0 22px">
+  <div class="panel">
+    <div class="panel-hd"><span class="num">5</span> Airline policy reference</div>
+    <div class="panel-bd">
+      <div class="hint" style="margin-bottom:10px">Verified from each airline's own published policy. Exact per-route and international fees change often — always confirm the live figure in the GDS before quoting a passenger.</div>
+      <select id="airlineSel" style="width:100%;max-width:340px"><option value="">Choose an airline…</option></select>
+      <div id="airlineCard" style="margin-top:14px"></div>
+    </div>
+  </div>
+</section>
+
+<div class="tools">
+  <section class="panel">
+    <div class="panel-hd"><span class="num">3</span> Full answer library</div>
+    <div class="panel-bd">
+      <div class="hint" style="margin-bottom:12px">Every honest template, by topic. Fill the <span style="color:var(--amber)">amber placeholders</span> with numbers pulled from the GDS / fare rules — never a guess.</div>
+      <div id="library"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-hd"><span class="num">4</span> GDS itinerary formatter</div>
+    <div class="panel-bd">
+      <div class="hint" style="margin-bottom:8px">Paste raw Sabre segments to turn them into something a passenger can read.</div>
+      <textarea id="gdsIn" style="min-height:110px" placeholder="WN1434 19JUL 7 DALMCO 605A 945A 19JUL&#10;WN 782 19JUL 7 MCOPUJ 1040A 120P 19JUL"></textarea>
+      <button class="copy" id="fmtBtn" style="margin-top:10px">Format itinerary</button>
+      <div id="gdsOut"></div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  Find the reply and Clean my draft run fully in your browser — nothing is sent. AI draft sends only masked text to your own Groq proxy. Always verify fees before sending; never collect card details in chat.
+</footer>
+
+<script>
+/* ============================================================
+   CONFIG — only needed for the optional AI draft mode.
+   Paste your Groq Cloudflare Worker URL between the quotes.
+   Leave blank and the tool runs fully offline (templates only).
+   ============================================================ */
+const PROXY_URL = "https://chat-copilot-groq.davidwilson0569.workers.dev";
+
+/* ============================================================
+   DATA
+   ============================================================ */
+const AIRLINES = {WN:"Southwest",AA:"American",DL:"Delta",UA:"United",B6:"JetBlue",AS:"Alaska",NK:"Spirit",F9:"Frontier",G4:"Allegiant",HA:"Hawaiian",CM:"Copa",AC:"Air Canada",LH:"Lufthansa",BA:"British Airways",AF:"Air France",KL:"KLM",IB:"Iberia",TK:"Turkish",PC:"Pegasus",VY:"Vueling",FR:"Ryanair",TG:"Thai",EK:"Emirates",QR:"Qatar",EY:"Etihad",AV:"Avianca",AM:"Aeromexico",VS:"Virgin Atlantic"};
+const AIRPORTS = {DFW:"Dallas–Fort Worth",DAL:"Dallas Love Field",PUJ:"Punta Cana",MCO:"Orlando",ALB:"Albany",PHL:"Philadelphia",STT:"St. Thomas",ATL:"Atlanta",MIA:"Miami",BWI:"Baltimore",BOG:"Bogotá",IAD:"Washington Dulles",SFO:"San Francisco",BDL:"Hartford",SAN:"San Diego",TUL:"Tulsa",ORF:"Norfolk",BUF:"Buffalo",ICT:"Wichita",MCI:"Kansas City",PLS:"Providenciales",GRR:"Grand Rapids",STL:"St. Louis",HOU:"Houston Hobby",IAH:"Houston Bush",SRQ:"Sarasota",PTY:"Panama City",LOS:"Lagos",LHR:"London Heathrow",LGW:"London Gatwick",IST:"Istanbul",SAW:"Istanbul Sabiha",SCQ:"Santiago de Compostela",BNE:"Brisbane",PVG:"Shanghai",FCO:"Rome",BEY:"Beirut",YUL:"Montréal",CUN:"Cancún",FLL:"Fort Lauderdale",AUS:"Austin",SJU:"San Juan",DEN:"Denver",DTW:"Detroit",BNA:"Nashville",JFK:"New York JFK",EWR:"Newark",LGA:"New York LaGuardia",MSY:"New Orleans",RSW:"Fort Myers"};
+
+const RULES = [
+  {test:/\b(fee|fees|bag|baggage|checked|carry[- ]?on|luggage|cancel|refund|change fee|penalt)/i,level:"amber",ic:"$",
+   msg:"Fee / policy question. Only state a number you've pulled from the GDS or fare rules. If you haven't, say you'll confirm the exact figure — don't guess."},
+  {test:/\b(only \d+ seat|seats? (left|remain|available)|sold out|dynamic|hurry|book (now|asap)|before (it|they)|limited time)\b/i,level:"red",ic:"!",
+   msg:"Scarcity language. Only state a seat count you can actually see. Don't manufacture urgency — it's the #1 driver of chargebacks and complaints."},
+  {test:/\b(discount|% off|save|deal|marked down|struck|strike|regular price|normally|competitor)\b/i,level:"amber",ic:"%",
+   msg:"Discount framing. No inflated strike-through prices, no invented competitor fares. State the real price plainly."},
+  {test:/\b(confirmed|guaranteed|secured|locked in)\b/i,level:"amber",ic:"✓",
+   msg:"Status wording. Don't call a booking confirmed or guaranteed until it's ticketed. If it's not ticketed, say it's being processed."},
+  {test:/\b(card|credit card|debit|cvv|cvc|expir|security code|card number)\b/i,level:"red",ic:"⛊",
+   msg:"Never collect card details in chat (PCI + fraud risk). Route to your secure payment method or a call."},
+  {test:/\b(under any circumstances|will (never|not) cancel|won'?t cancel|guarantee.*(not|never) cancel|in writing that (you|we) will not|promise.*(never|not) cancel)\b/i,level:"red",ic:"!",
+   msg:"Absolute promise. Don't guarantee 'we'll never cancel' or commit in writing to something you can't enforce — the airline controls cancellations. Reassure honestly instead."}
+];
+
+/* Templates: id, cat, title, triggers[], body (honest, with 「VERIFY」 placeholders) */
+const TEMPLATES = [
+ // POLICY / INFO
+ {cat:"Policy & info",title:"Checked bag fee",
+  triggers:[/checked? bag/i,/\bbaggage\b/i,/\b\d(?:st|nd|rd|th)? bag/i,/extra (bag|luggage)/i,/luggage/i],
+  body:"Bag fees depend on the route and fare, so let me confirm the exact amount for your itinerary rather than quote a general figure. For 「route」 in 「fare type」, the first checked bag is 「VERIFY IN GDS: fee」 each way. It's usually cheaper to add it in advance than at the airport — happy to sort that out with you."},
+ {cat:"Policy & info",title:"Is carry-on included?",
+  triggers:[/carry[- ]?on/i,/hand (bag|luggage)/i,/cabin bag/i,/personal item/i],
+  body:"Let me confirm from your fare. 「VERIFY: carry-on included? Y/N」. Most fares include one personal item; a full cabin bag depends on the fare and airline. I'll check exactly what yours allows so there are no surprises at the gate."},
+ {cat:"Policy & info",title:"Cancellation policy",
+  triggers:[/cancel/i,/cancellation/i,/\brefund/i,/get my money back/i],
+  body:"On many tickets you can cancel within 24 hours of booking for a full refund — that free window mainly applies to US-originating tickets booked directly, so I'll confirm it applies to yours. After that it depends on the fare rules on your ticket, and when you cancel can affect the amount. Share your booking reference and I'll confirm exactly what applies: 「VERIFY: fare rules / penalty」."},
+ {cat:"Policy & info",title:"Does timing change my cancellation fee?",
+  triggers:[/when.*(cancel|change)/i,/does.*when.*matter/i,/sooner.*cheaper/i,/closer to (the )?(flight|departure)/i,/timing.*(fee|cancel|refund)/i,/last[- ]?minute cancel/i],
+  body:"Timing matters, but exactly how depends on the airline and your fare, so I won't quote a number blind. Two things are true on every airline: cancel before departure — a no-show usually forfeits the most, often the whole ticket; and whether you get cash, a travel credit, or nothing is set by your fare brand, not the cabin. Beyond that, some airlines keep the value the same any time before departure while others raise the penalty the closer to departure you cancel. Share your booking reference and I'll read the exact rule for your ticket 「VERIFY IN GDS: fare rules / penalty by time」 — and I'll also price a date change, which is often cheaper than cancelling."},
+ {cat:"Policy & info",title:"Seat selection in economy / basic",
+  triggers:[/seat selection/i,/select (my )?seats?/i,/choose (my )?seats?/i,/basic economy/i,/assign(ed)? seats?/i],
+  body:"Let me check your fare. 「VERIFY: seat selection included? Y/N」. If it's basic economy, advance seat selection isn't included — it'd be 「VERIFY: fee」 per passenger, or I can price the next fare up which includes it, so you can compare the two."},
+ {cat:"Policy & info",title:"Seats together",
+  triggers:[/seat(s)? together/i,/sit together/i,/next to each other/i,/seated together/i],
+  body:"Once the ticket is issued you can choose seats on the airline's site, and I'm happy to request seats together with the airline for you. I can't guarantee specific seats the airline controls, but I'll do everything I can to get you placed side by side."},
+ {cat:"Policy & info",title:"Change / date-change fee",
+  triggers:[/change (my )?(flight|date|time)/i,/reschedul/i,/change fee/i,/move my flight/i],
+  body:"Change rules depend on the fare. For your ticket: 「VERIFY: change allowed? fee? fare difference?」. Tell me your booking reference and the new dates you're considering and I'll confirm the exact cost before anything is changed."},
+ {cat:"Policy & info",title:"Unaccompanied minor",
+  triggers:[/unaccompanied/i,/child (flying|travel)/i,/minor/i,/kid.*(alone|by (her|him)self)/i],
+  body:"This one depends on the operating airline's own unaccompanied-minor rules, so I don't want to guess. Tell me the airline and your booking reference and I'll confirm their exact policy, forms and any service fee 「VERIFY: airline UM policy」. Most airlines require their own UM service to be arranged in advance."},
+ {cat:"Policy & info",title:"Online check-in not working / blocked",
+  triggers:[/check[- ]?in/i,/can'?t check in/i,/blocked/i,/check in.*(not|won'?t|isn'?t)/i],
+  body:"Online check-in usually opens 24 hours before departure and closes about 1 hour before. If it's not opening yet, that's likely why. If it's showing an error or block even inside that window, that's something only the airline can clear — I'd contact them directly at 「VERIFY: airline contact」 so it's sorted before your flight."},
+ {cat:"Policy & info",title:"Print return boarding pass early",
+  triggers:[/print.*(return|both|second)/i,/boarding pass/i,/print.*ticket/i],
+  body:"If both boarding passes are already available in your check-in, you can print the return at the same time as the outbound. For a return several days out, check-in often isn't open yet, so it may only become available closer to that flight."},
+ {cat:"Policy & info",title:"New EU hand-luggage rule",
+  triggers:[/eu (law|rule|regulation)/i,/hand luggage.*(free|law|charge)/i,/new (law|regulation).*(bag|luggage)/i,/free cabin bag/i,/european law/i,/no longer charge.*(hand|cabin|luggage)/i],
+  body:"You're thinking of the EU's air-passenger-rights reform — it's real and moving fast, but it isn't in force yet. The European Parliament approved it in July 2026; it still needs formal sign-off from the EU Council and then a transition period before airlines must comply (widely expected around 2027). So for travel in 2026, low-cost carriers like Vueling and Pegasus can still apply their current baggage charges. It also mainly guarantees a free under-seat personal item and clearer fare display — a larger overhead cabin bag can still be a paid extra. Best to add any bag you need at booking, where it's cheapest, and I'll confirm what your fare already includes."},
+ {cat:"Policy & info",title:"Entry rules / visa / passport",
+  triggers:[/visa/i,/passport/i,/entry (requirement|rule)/i,/etias/i,/eta\b/i,/do i need/i],
+  body:"Entry rules change and are set by the destination, so please confirm with the official government source for your nationality before you travel: 「VERIFY: official entry-requirement link」. I can tell you what generally applies for 「destination」, but the official source is the one to rely on."},
+
+ // PRICE SHOPPING
+ {cat:"Price & quotes",title:"Quote request — gather details",
+  triggers:[/looking for (a )?flight/i,/i need (a )?flight/i,/fly(ing)? (from|to)/i,/how much.*(flight|ticket|fly)/i,/price.*(flight|ticket)/i,/round trip/i],
+  body:"Happy to pull live fares for you. Can you confirm: departure and destination cities, exact dates, number of passengers, and cabin (economy / premium / business)? Once I have those I'll compare a few airlines and give you the real total including taxes 「VERIFY: pull fare from GDS」."},
+ {cat:"Price & quotes",title:"Advertised promo fare not showing",
+  triggers:[/\$\d+ flight/i,/promo/i,/advertised/i,/where'?s the/i,/deal.*(not|isn'?t)/i],
+  body:"Those promotional fares apply to specific dates and routes and sell out, so they're often not available on the dates you're checking — especially peak periods. Send me your dates, departure city and passenger count and I'll check the best real fare currently available for you."},
+ {cat:"Price & quotes",title:"Holiday / peak price is high",
+  triggers:[/(too )?expensive/i,/so high/i,/crazy (price|expensive)/i,/why so much/i,/holiday|christmas|new year|peak/i],
+  body:"You're travelling during a peak period, so fares are genuinely higher than usual right now. If your dates are flexible by even a day or two, there's a chance of a lower fare — want me to check nearby dates? I can also keep an eye on this route and message you if it drops, though I can't promise it will."},
+
+ // READY TO BOOK
+ {cat:"Booking",title:"How do I book / book through you",
+  triggers:[/how do i book/i,/can i book/i,/book (through|with) you/i,/want to book/i,/proceed/i],
+  body:"Yes, I can book this for you. I'll need the full passenger names and dates of birth exactly as on their passports, plus a contact email and phone. For payment I'll send you a secure link / take it by phone — for your security we don't take card details over chat. Shall I get started?"},
+ {cat:"Booking",title:"Multiple passengers, one booking",
+  triggers:[/(\d+|three|four|two|several) (people|passengers|of us)/i,/same (booking|purchase)/i,/book.*together/i],
+  body:"Yes, I can book everyone on the same reservation. Please share each passenger's full name and date of birth exactly as on their passport, and I'll set it up together. Payment I'll handle securely — never over chat."},
+
+ // POST-BOOKING
+ {cat:"After booking",title:"Add TSA PreCheck / Known Traveler",
+  triggers:[/tsa/i,/known traveler/i,/precheck/i,/pre[- ]?check/i],
+  body:"Happy to add that. Share the TSA/Known Traveler number and the exact passenger name, and I'll place the request with our issuance team. Once it's added you'll get an email confirmation at the address on the booking."},
+ {cat:"After booking",title:"Add frequent flyer number",
+  triggers:[/frequent flyer/i,/miles/i,/loyalty (number|program)/i,/mileage/i],
+  body:"Sure — send me the frequent flyer number and the airline it's for, plus the passenger name, and I'll request it be added to your reservation. Note it needs to match the airline actually operating each flight to earn miles."},
+ {cat:"After booking",title:"Transfer ticket to another person",
+  triggers:[/another person/i,/transfer.*(ticket|flight)/i,/change.*name/i,/different (person|name)/i,/someone else/i],
+  body:"Airline tickets generally can't be transferred to a different person. What's usually possible is cancelling for future travel credit under the same passenger's name — 「VERIFY: fare rules / credit validity」. Tell me your booking reference and I'll confirm exactly what your fare allows."},
+
+ // BOOKING STATUS
+ {cat:"Status",title:"Where are my e-tickets? / Is it confirmed?",
+  triggers:[/e[- ]?ticket/i,/not (confirmed|received)/i,/is (it|this|my).*(confirm|booked)/i,/ticket.*(released|issued|not)/i,/didn'?t get/i,/where.*ticket/i],
+  body:"Thanks for checking in. Your booking is being processed and the ticket is being issued — I'll email it to the address on the booking as soon as the airline confirms, typically within 「VERIFY: issuance window」. Once it's ticketed I'll share the airline confirmation code so you can view it directly on the airline's site."},
+ {cat:"Status",title:"Verification call / approval",
+  triggers:[/verification/i,/verify/i,/approve.*charge/i,/confirm.*charge/i,/callback/i],
+  body:"For your security we run a quick verification on the cardholder before issuing. I may call you on the number on the booking to confirm a couple of details — it only takes a moment, and it protects you against fraud. Everything else is on track."},
+ {cat:"Status",title:"E-ticket overdue / past the time promised",
+  triggers:[/more than \d+ ?(hour|hr)/i,/still.*(no|haven'?t).*ticket/i,/taking too long/i,/not acceptable.*(time|process)/i,/payment.*(taken|charged|deducted).*ticket/i,/been (over|more than)/i],
+  body:"I'm sorry — this has taken longer than the time you were given, and I understand the frustration, especially with the payment already charged. I've escalated your booking to our ticketing team for priority handling and I'm chasing a firm update now. Rather than give you another time I can't be certain of, let me confirm a realistic one and come straight back to you — and I'll email written confirmation to the address on file the moment your e-ticket is issued."},
+ {cat:"Objection handling",title:"Is this verification even legal / required?",
+  triggers:[/verification.*(legal|illegal|not required|not needed)/i,/illegal process/i,/no.*company.*verif/i,/why.*verif.*(already|paid|charged|verified)/i],
+  body:"I understand the concern, and I'd rather explain it than argue over it. This is a standard cardholder-confirmation step some bookings go through to make sure the payment was made by the account holder — it protects you against card fraud and disputes, and it's separate from the payment itself, which has already gone through. I won't ask for your full card number or CVV. Let me walk you through exactly what's needed so we can finish and get your ticket issued."},
+ {cat:"Objection handling",title:"Cardholder verification — what we actually need",
+  triggers:[/what.*(exact|kind of).*verif/i,/explain.*verif/i,/how.*verif.*work/i,/verification steps/i,/prove.*cardholder/i],
+  body:"To confirm you're the cardholder we use a quick step — never your full card number, CVV or online-banking login. Depending on the booking that's a short verification call to the number on file, or confirming the exact amount charged; if you send anything in writing, please black out everything except the {BRAND} charge and its amount. Once that's confirmed I'll issue your e-ticket. Which is easier for you — a quick call, or confirming the amount here?"},
+
+ // COMPLAINT / TRUST
+ {cat:"Trust & complaints",title:"Are you legit? / I've seen complaints",
+  triggers:[/legit/i,/scam/i,/trust/i,/complaint/i,/fake ticket/i,/is this real/i,/safe to book/i],
+  body:"Completely fair to ask. {BRAND} is a US IATA-accredited agency, and every ticket is issued through the airline's own system with a real airline confirmation code (PNR) you can verify directly with the airline — that's the strongest proof there is. You'll also find us listed on major metasearch sites like Kayak. Ask me anything before you book; there's no pressure to commit, and I'm here after booking too."},
+ {cat:"Trust & complaints",title:"Are you AI / a real person?",
+  triggers:[/are you (a )?(bot|ai|real|human)/i,/talking to.*(bot|robot|ai)/i,/real person/i],
+  body:"You're chatting with a real agent — happy to help. What can I sort out for you?"},
+ {cat:"Trust & complaints",title:"Frustrated about airline fees",
+  triggers:[/rip[- ]?off/i,/thieves/i,/outrageous/i,/ridiculous.*(fee|charge|price)/i,/can'?t believe/i],
+  body:"I completely understand the frustration — some of these charges are steep and the way they're presented isn't always clear. Airlines set their own optional fees, but let me help you see exactly what's included in your fare versus what's an optional extra, so you only pay for what you actually need. Send me your route and dates and I'll break it down."},
+ // GENERAL TRAVEL
+ {cat:"General travel",title:"How early to get to the airport",
+  triggers:[/how early/i,/what time.*airport/i,/arrive.*airport/i,/how (long|much time) before/i,/get to the airport/i],
+  body:"A good rule of thumb is about 2 hours before a domestic flight and 3 hours before an international one — enough time for check-in, bag drop and security without rushing. If you're flying from a large or busy airport or during a holiday, give yourself the longer end. Want me to check the recommended cut-off times for your airport and airline?"},
+ {cat:"General travel",title:"Connection / layover time",
+  triggers:[/layover/i,/connection.*time/i,/enough time.*connect/i,/tight connection/i,/make my connection/i],
+  body:"It depends on the airport and whether it's a domestic or international transfer — international connections need more time for immigration and re-checking bags. Share your booking reference and I'll look at your exact layover and tell you honestly whether it's comfortable, tight or risky."},
+ {cat:"General travel",title:"Missed connection — what happens",
+  triggers:[/miss(ed)? (my )?connection/i,/what if i miss/i,/connecting flight.*miss/i],
+  body:"If you miss a connection because an earlier flight on the same ticket was delayed, the airline normally rebooks you on the next available flight at no charge — that's why booking connections on one ticket matters. If the miss is on separate tickets or due to your own timing, it's treated as a new booking. If it happens, contact us or the airline right away and we'll help find the next option."},
+ {cat:"General travel",title:"Liquids rule (100 ml)",
+  triggers:[/liquid/i,/100 ?ml/i,/3[- ]?1[- ]?1/i,/how much.*liquid/i,/toiletries/i],
+  body:"The standard rule is liquids, gels and aerosols in containers of 100 ml (3.4 oz) or less, all fitting in one clear quart-size bag. A few airports have newer scanners that relax this, but it's not everywhere yet, so pack to the 100 ml rule to be safe. Medications and baby formula are allowed in larger amounts — just declare them at security."},
+ {cat:"General travel",title:"Power bank / lithium batteries",
+  triggers:[/power ?bank/i,/batter(y|ies)/i,/lithium/i,/portable charger/i],
+  body:"Power banks and spare lithium batteries must go in your carry-on, never in checked luggage — they're not allowed in the hold for safety reasons. Very high-capacity power banks have limits, so if yours is large it's worth checking your airline's cap. I can look that up for your airline if you'd like."},
+ {cat:"General travel",title:"Travelling with medication",
+  triggers:[/medication|medicine|prescription/i,/pills|insulin|epipen/i,/travel with.*med/i],
+  body:"Keep medication in your carry-on in its original labelled packaging, with a copy of the prescription for anything important. Liquid medications are exempt from the usual 100 ml limit — just let the officer know at security. For controlled medications or certain destinations, it's worth confirming the rules for where you're going before you travel."},
+ {cat:"General travel",title:"Bringing food through security",
+  triggers:[/bring food/i,/food.*security/i,/snacks.*(plane|flight|security)/i,/can i (bring|take) food/i],
+  body:"Solid foods — sandwiches, snacks, fruit — are generally fine through security and on board. Anything spreadable or liquid (yogurt, sauces, soups) counts as a liquid and follows the 100 ml rule. For international arrivals, some countries restrict fresh food, meat or produce, so it's best to finish or declare those on arrival."},
+ {cat:"General travel",title:"TSA PreCheck / Global Entry — what they are",
+  triggers:[/pre[- ]?check|precheck/i,/global entry/i,/tsa.*(what|worth)/i,/clear.*airport line/i],
+  body:"TSA PreCheck is a U.S. program that gives you a faster security lane (shoes and laptop stay packed); Global Entry adds expedited U.S. customs on international arrival and includes PreCheck. Both need an application and a small fee, and you get a Known Traveler Number to add to bookings. If you already have a Known Traveler Number, I can help make sure it's on your reservation."},
+ {cat:"General travel",title:"Personal item vs carry-on vs checked",
+  triggers:[/difference.*(personal item|carry|checked)/i,/what.*personal item/i,/carry[- ]?on vs/i,/types of bag/i],
+  body:"A personal item is the small bag that fits under the seat in front of you — a purse, laptop bag or small backpack. A carry-on is the larger bag for the overhead bin. A checked bag is the one you hand over at the counter and collect at the other end. What's included depends on your fare and airline, so if you share your booking I'll tell you exactly what yours allows."},
+ {cat:"General travel",title:"Overweight / oversize bag",
+  triggers:[/overweight/i,/over ?weight/i,/bag.*too heavy/i,/50 ?(lb|pound)|23 ?kg/i,/oversize/i],
+  body:"Most airlines charge an overweight fee once you pass their limit — often 23 kg / 50 lb in economy — and it rises the heavier the bag. It's usually cheaper to move weight between bags or add an extra bag than to pay overweight charges. Tell me your airline and I'll check their exact weight limits and fees."},
+ {cat:"General travel",title:"Lost or delayed baggage",
+  triggers:[/lost (bag|luggage)/i,/delayed (bag|luggage)/i,/(bag|luggage).*didn'?t arrive/i,/missing (bag|luggage)/i,/where is my (bag|luggage)/i],
+  body:"If a checked bag doesn't arrive, report it at the airline's baggage desk before you leave the airport and get a file reference — that starts the trace. Most bags turn up within a day or two and are delivered to you. Keep receipts for essentials you buy in the meantime, as airlines often reimburse reasonable costs. The airline handles the trace directly, but I can point you to the right contact."},
+ {cat:"General travel",title:"Sports gear / instruments / special items",
+  triggers:[/golf|ski|snowboard|surfboard|bicycle|bike/i,/sports (equipment|gear)/i,/musical instrument|guitar/i,/oversized item/i],
+  body:"Sports equipment and instruments are usually accepted, but rules and fees vary a lot by airline — some treat them as a normal checked bag, others charge a special-item fee, and larger items may need arranging in advance. Tell me the item and your airline and I'll check how they handle it and what it costs."},
+ {cat:"General travel",title:"WiFi, power & meals on board",
+  triggers:[/wi-?fi|internet.*(plane|flight)/i,/power.*(seat|plane)|outlet|charge.*phone/i,/meal|food.*(included|on board|served)/i,/entertainment/i],
+  body:"That varies by airline, aircraft and route — many flights have WiFi (free or paid) and seat power, and meals are usually included on longer and international flights but sold on board on shorter ones. I can look up what's offered on your specific flight if you'd like to know before you go."},
+ {cat:"General travel",title:"Travelling with a baby / lap infant",
+  triggers:[/baby|infant|lap child|lap infant/i,/travel.*(newborn|toddler)/i,/car seat|stroller/i],
+  body:"Children under 2 can usually travel as a lap infant or in their own purchased seat, and airlines allow FAA-approved car seats on board. Most also let you bring a stroller and gate-check it free. Any infant fees and the finer rules vary by airline and by domestic vs international, so tell me your route and I'll confirm the specifics."},
+ {cat:"General travel",title:"Flying while pregnant",
+  triggers:[/pregnan/i,/expecting.*(baby|travel)/i,/fly.*(pregnant|weeks)/i],
+  body:"In most cases yes — airlines generally allow travel up to around 36 weeks for a single pregnancy, and some ask for a doctor's letter after about 28 weeks. The cut-off varies by airline, so it's best to confirm before booking, and a quick word with your doctor is wise too. Share your airline and I'll look up their policy."},
+ {cat:"General travel",title:"Wheelchair / special assistance",
+  triggers:[/wheelchair/i,/special assistance/i,/mobility|disabled|disability/i,/assistance.*(airport|board)/i],
+  body:"Airlines provide wheelchair and mobility assistance through the airport and to your seat free of charge — it's best arranged in advance so it's ready on the day. Let me know the passenger's needs and your booking reference and I'll place the request with the airline for you."},
+ {cat:"General travel",title:"Pet in cabin (general)",
+  triggers:[/(bring|travel|fly).*(pet|dog|cat)/i,/pet.*(cabin|allowed|policy)/i,/emotional support|service animal/i],
+  body:"Many airlines allow small cats and dogs in the cabin in an approved carrier for a fee, with limited space per flight; larger pets sometimes travel in the hold, and some routes don't allow pets at all. Service animals follow separate rules. Policies differ a lot by airline and route, so tell me your airline and route and I'll check what's possible."},
+ {cat:"General travel",title:"Flight delayed or cancelled — my rights",
+  triggers:[/delayed flight|flight delay/i,/cancelled flight|flight cancel(led|ed)/i,/my rights|entitled/i,/compensation/i],
+  body:"If the airline cancels or significantly delays your flight, you're generally entitled to a rebooking or a refund, and depending on the region and cause, sometimes meals, accommodation or compensation — Europe's EU261 rules are the strongest. If it's your own choice to cancel, that follows your fare rules instead. If it happens to your booking, reach out and I'll help you sort the options."},
+ {cat:"General travel",title:"Is travel insurance worth it?",
+  triggers:[/travel insurance/i,/should i.*insur/i,/insurance.*worth/i],
+  body:"It's a personal call, but it can be worth it for trips where you'd lose a lot if plans change — it usually covers trip cancellation, medical emergencies abroad and lost baggage, and it's especially worth considering on non-refundable or international trips. I can't recommend a specific policy, but comparing a couple before you travel is a good idea."},
+ {cat:"General travel",title:"Best time to book / will fares drop",
+  triggers:[/cheapest time|best time to book/i,/will.*price(s)? (drop|go down|come down)/i,/should i wait.*book/i,/prices go down/i],
+  body:"Honestly there's no guaranteed answer — fares move with demand and can rise as easily as fall. As a pattern, booking a few weeks to a couple of months ahead (longer for international or peak travel) tends to help, and mid-week departures are often cheaper. I can't promise a price will drop, but if you're flexible on dates I'll happily check a few options for the best available fare."},
+ {cat:"General travel",title:"How much cash can I travel with",
+  triggers:[/how much cash/i,/cash.*(limit|declare|customs)/i,/carry.*money/i,/\$10,?000/i],
+  body:"There's no limit on how much you can carry, but most countries require you to declare amounts over a threshold when entering or leaving — in the U.S. it's $10,000 or the equivalent. It's usually safer to lean on cards and carry a modest amount of local cash. Tell me your destination and I'll point you to its declaration rule."},
+ {cat:"General travel",title:"What currency am I charged in",
+  triggers:[/what currency/i,/currency.*(charged|payment|paid)/i,/usd or cad|cad or usd/i,/which currency/i],
+  body:"The charge is in the currency shown at checkout for the site you're booking on — I'll confirm exactly which for your booking so there are no surprises. If your card's home currency is different, your bank may convert it and could add a small foreign-transaction fee. Tell me your card type and I'll confirm the currency you'll be billed in."},
+ {cat:"General travel",title:"How long do refunds take",
+  triggers:[/how long.*refund/i,/refund.*(take|processing|time)/i,/when.*(get|receive).*refund/i,/money back.*how long/i],
+  body:"Once a refund is approved it typically posts back to your original payment method within a couple of billing cycles — card refunds are usually faster than bank transfers. The exact timing depends on the airline's processing and your bank. If you share your booking reference I'll check the status and give you a realistic timeframe."},
+ {cat:"General travel",title:"Passport validity / 6-month rule",
+  triggers:[/passport.*(valid|expir|6 month|six month)/i,/how long.*passport valid/i,/passport expire/i],
+  body:"Many countries require your passport to be valid at least six months beyond your travel dates, though it varies by destination. I'd check your expiry against your return date early, since renewals can take weeks. Tell me where you're heading and I'll point you to the exact requirement to confirm."},
+ {cat:"General travel",title:"Name on ticket must match ID",
+  triggers:[/name.*(ticket|booking).*(match|different|wrong)/i,/misspelled name|name spelling/i,/wrong name on/i,/maiden name/i],
+  body:"The name on your ticket should match the government ID or passport you'll travel on — small typos can usually be corrected, but the name needs to match at the airport. If there's a mismatch or a spelling error, send me your booking reference and I'll check what can be fixed and how, before it becomes a problem at check-in."},
+ {cat:"General travel",title:"Child consent letter (one parent)",
+  triggers:[/consent letter|permission letter/i,/child.*(one parent|single parent|without)/i,/notari[sz]ed.*(letter|consent)/i,/travel.*child.*international/i],
+  body:"For international trips, some countries ask for a signed (sometimes notarized) consent letter when a child travels with only one parent or without both parents — it helps at immigration. The exact requirement depends on the destination. Tell me the country you're travelling to and I'll point you to what they ask for so you're not caught out at the border."},
+ {cat:"General travel",title:"Jet lag / red-eye tips",
+  triggers:[/jet ?lag/i,/red[- ]?eye/i,/long[- ]?haul.*(tips|sleep)/i,/overnight flight/i],
+  body:"A few things help: shift your sleep an hour or two toward your destination before you go, stay hydrated and go easy on alcohol and caffeine in the air, and get onto the local day/night rhythm as soon as you land. On a red-eye, a window seat, an eye mask and putting screens away for the last stretch make sleep easier. Want me to check whether your flight has lie-flat or extra-legroom options?"},
+ // OBJECTION HANDLING
+ {cat:"Objection handling",title:"Why so many negative reviews?",
+  triggers:[/negative review|bad review/i,/reviews.*(bad|negative)/i,/why.*(so many|many).*(review|complaint)/i,/reviews say/i],
+  body:"That's a fair thing to ask. Like most agencies, the reviews people leave tend to skew toward the frustrating moments — often airline-driven cancellations or schedule changes that happen after a ticket is issued and are outside our control. That's not an excuse; we read all feedback and we're working to do better. What I can promise on your booking is full transparency — I'll tell you exactly what you're paying for and what to expect."},
+ {cat:"Objection handling",title:"Do you raise the fare after booking?",
+  triggers:[/increase.*(fare|price).*(after|call)/i,/raise.*(fare|price)/i,/reviews say.*call/i,/change the price after/i,/higher.*after book/i],
+  body:"I understand why that would worry you. Our aim is always to honor the price you booked. On the rare occasion a negotiated fare can't be honored by the airline, we'll first try to get you the same price on comparable flights — and if we genuinely can't, we'll show you the real current price and let you decide, with no pressure. Because you booked directly, you're also free to cancel for a full refund within 24 hours. You'll never be charged more than you agreed to without your say-so."},
+ {cat:"Objection handling",title:"Why are your prices lower than the airline?",
+  triggers:[/why.*(price|fare).*(so )?(low|cheap|lower)/i,/cheaper than.*airline/i,/how.*(so cheap|prices low)/i,/too good to be true/i],
+  body:"Good question. We work with fare suppliers who give us access to negotiated rates that aren't always on the airline's own site — that's how we're often able to offer a lower total. Everything is booked through the same airline systems, so you get a normal ticket with a normal airline confirmation."},
+ {cat:"Objection handling",title:"Receipt shows a lower fare than you charged",
+  triggers:[/receipt.*(lower|less|different)/i,/airline.*receipt/i,/charged.*more than/i,/invoice.*(lower|different)/i],
+  body:"Happy to explain. The airline's receipt shows only the airline's portion of the fare. Because you booked a discounted fare through us, your total also includes our supplier and service/issuance fees, which makes up the difference. I can email you an itemized invoice so you can see exactly what each part is — just say the word."},
+ {cat:"Objection handling",title:"Other companies never made me verify",
+  triggers:[/other (companies|agencies|sites).*verif/i,/never had to verify/i,/why.*verif.*(when|if|but).*(other|else)/i,/no one else.*verif/i],
+  body:"You're right that not everyone does this, and I get that it feels like an extra step. We verify because it protects your card against fraud and keeps your booking secure. It's quick, and it's a one-time thing for this booking."},
+ {cat:"Objection handling",title:"Price shown / booked but not available",
+  triggers:[/listed.*(no longer|not).*available/i,/why.*book.*(if|when).*not available/i,/price.*(still )?showing/i,/available online but/i,/able to book.*not available/i],
+  body:"Sorry for the confusion. We book through the same global system (GDS) that agencies worldwide use, so the very same seat can be held by more than one agency at once, and our site can occasionally lag a little behind the airline's live availability. That's how a fare can still show — or be booked — right as it's confirmed elsewhere. When it happens, I'll always show you the best current option and price, or refund you in full."},
+ {cat:"Objection handling",title:"Confirmed online but ticket can't be issued",
+  triggers:[/confirmed.*(but|can'?t).*issue/i,/why.*confirmed.*(if|but).*(not|can'?t)/i,/booking confirmed.*(no|not) ticket/i,/can'?t issue.*ticket/i],
+  body:"I'm really sorry about that. Airlines release a limited number of discounted seats to agencies on a first-come, first-served basis, and occasionally another agency books the last of them before we can finalize yours. If that happens, we'll either find you a comparable option or refund you in full — you won't be left out of pocket."},
+ {cat:"Objection handling",title:"Paid Economy, got Basic Economy",
+  triggers:[/basic economy.*(instead|got|received)/i,/paid.*economy.*(got|but).*basic/i,/downgrade.*basic/i,/i booked economy/i],
+  body:"I'm sorry — I understand the frustration if you expected a standard economy seat. On these deeply discounted fares the ticket issues as Basic Economy, and once it's issued we genuinely can't upgrade it without the airline's fare rules applying. What I can do is price the difference to move you to standard economy, or look at another way to make it right. I'll make sure you're clear on exactly what your current ticket includes."},
+ {cat:"Objection handling",title:"Medical emergency — waive the change fee",
+  triggers:[/medical emergency.*(change|waive)/i,/waive.*change fee/i,/emergency.*change/i,/sick.*change.*fee/i],
+  body:"I'm so sorry you're dealing with this. I really wish I could waive it, but as an agency we're bound by the airline's fare rules and can't change a ticket without paying the airline's fees. What I can do is check the exact change cost on your fare and find the lowest-cost way to get you where you need to be."},
+ {cat:"Objection handling",title:"Medical emergency — cancel & refund",
+  triggers:[/medical emergency.*(cancel|refund)/i,/emergency.*refund/i,/sick.*(cancel|refund)/i,/waiver.*medical/i,/medical.*documentation/i],
+  body:"I'm sorry you're going through this. Your fare is non-refundable under the airline's rules, but I don't want to stop there — if you can send medical documentation, I'll submit a waiver/credit request to the airline on your behalf. I can't guarantee the outcome since it's their decision, but I'll advocate for you and update you as soon as they respond."},
+ {cat:"Objection handling",title:"Can I call back later to book?",
+  triggers:[/call back.*(later|book)/i,/book (later|tomorrow)/i,/think about it.*book/i,/hold.*(fare|price)/i,/come back.*book/i],
+  body:"Totally fine to take your time. If you'd like to lock in today's price, the good news is you have 24 hours after booking to cancel for a full refund or make changes — so booking now secures the fare without committing you, and if you spot a lower fare in that window, tell me and we'll look at it. No pressure either way; I'm here whenever you're ready."},
+ {cat:"Objection handling",title:"Are these low-cost extra fees fair / do I have to pay them?",
+  triggers:[/outrageous.*(fee|charge)/i,/have to pay.*(extra|fee)/i,/why.*(so many|all these).*(fee|charge)/i,/low.?cost.*(fee|extra)/i,/hidden fee/i,/rip.?off.*bag/i],
+  body:"I understand — low-cost fares can feel like they're all extras. Here's the honest picture: carriers like Vueling and Pegasus sell a low base fare that usually includes only a small under-seat personal item, while a cabin bag, checked bag, seat selection, priority or changes are optional add-ons — and their price often isn't shown until you've picked your flight, which is why it can feel like a surprise. The upside is you only pay for what you actually need: if you travel within your fare's allowance and skip the extras, there's nothing more to pay. Tell me your fare type or share your booking and I'll confirm exactly what's included, so there are no surprises."},
+ {cat:"Objection handling",title:"Is a fee that high even legal? (e.g. €182 carry-on)",
+  triggers:[/is (that|this) legal|can'?t be legal|surely.*legal/i,/(more than|over) half.*(flight|fare)/i,/\d+ ?(€|euro|dollar).*(carry|bag|luggage)/i,/legal.*(charge|fee)/i],
+  body:"I understand why that seems surprising — a bag costing a big share of the fare doesn't feel right. Baggage prices vary a lot by airline, route, dates and when the bag is added, and while the amount can look high, airlines are generally allowed to set their own optional baggage charges as long as they're clearly disclosed during booking. I don't want to guess at your case, though — if you share the route, dates and whether that figure was for one bag or for multiple flights/passengers, I'll review the breakdown and check it looks right."}
+];
+
+/* Airline policy reference — verified from each airline's own published policy.
+   Exact per-route & international fees change often → confirm in GDS at quote time. */
+const AIRLINE_KB = [
+ {code:"AS", name:"Alaska", region:"US", updated:"Apr 2026", source:"alaskaair.com — Optional Services & Fees", facts:[
+   ["Carry-on & personal item","One carry-on (max 22 × 14 × 9 in) + one personal item (max 17 × 10 × 9 in), free on EVERY fare including the basic Saver fare. No published carry-on weight limit — notably Saver keeps the free carry-on, unlike United/American Basic."],
+   ["Checked bags","North America: 1st $45, 2nd $55, 3rd $200 — per person each way, flat since Apr 10, 2026 (no online-prepay discount). Weight 50 lb / 62 in; First & Business get 2 free (up to 70 lb). Most long-haul international Main fares include the 1st bag free (incl. Asia/Oceania via the Hawaiian network). 20-minute bag guarantee on domestic."],
+   ["Overweight / oversize","51–70 lb +$100; 71–100 lb +$200; over 62 in +$200. Over 100 lb / 115 in not accepted."],
+   ["Pet in cabin","Cats and dogs only (rabbits & household birds phased out after Apr 4, 2026). Under-seat soft carrier max 17 × 11 × 9.5 in; the passenger must be 18+. Fee $100 each way per carrier ($35 wholly within Hawaii). Reserve by contacting Alaska after booking — space is limited, first-come. One carrier per person."],
+   ["Unaccompanied minor","Required for ages 5–12 (5–7 nonstop only; 8–12 may connect at Alaska hubs); optional for 13–17. Fee $50 each way nonstop / $75 connecting, waived for Mileage Plan elites. No travel 9 PM–5 AM. Alaska raised fees on Jan 2, 2026 and some sources now cite $100 each way covering up to 2 children — confirm the current amount."],
+   ["Check-in window","Online check-in opens 24 hrs before on alaskaair.com / the app. Airport bag-drop/check-in cutoff is typically ~40 min domestic / ~60 min international — varies by airport. Saver seats are auto-assigned at check-in."],
+   ["Change & cancellation","24-hr risk-free cancel on any fare. SAVER (basic economy): can't be changed after 24 hrs and is essentially non-refundable — you'd cancel and rebook. MAIN / PREMIUM CLASS / FIRST CLASS (standard, non-refundable): no change fee, fare difference applies; a voluntary cancel returns the value as a credit toward future travel, not cash. REFUNDABLE fares (refundable Main or First): full refund to original payment before departure."]
+ ]},
+ {code:"B6", name:"JetBlue", region:"US", updated:"Mar 2026", source:"jetblue.com — Flights Terms & pet/UM pages", facts:[
+   ["Carry-on & personal item","One carry-on (max 22 × 14 × 9 in) + one personal item (max 17 × 13 × 8 in), free on EVERY fare including Blue Basic (since Sept 6, 2024). Blue Basic boards last, so bin space isn't guaranteed. A pet carrier counts as your personal item."],
+   ["Checked bags","Peak/off-peak pricing. Off-peak domestic/nearby-international 1st ≈ $39–$45 prepaid online (peak higher; +$10 within 24 hrs or at airport), 2nd ≈ $59–$60, 3rd $125–$200. Blue Plus includes 1 bag; Mint includes 2. Transatlantic 1st ≈ $75, and most fares except Blue Basic include 1 free bag. Weight 50 lb / 62 in."],
+   ["Overweight / oversize","51–99 lb +$150 flat; 63–80 in +$150 flat — both stack if one bag triggers both."],
+   ["Pet in cabin","Small cats and dogs only, ≥8 weeks, pet + carrier ≤20 lb; carrier max 17 × 12.5 × 8.5 in under the seat. Fee $125 each way (added in 'Extras'). No cargo/checked pets. Max 6 pets per flight, 2 per passenger (2nd needs its own seat + fee). Not in Mint, and not on flights to Trinidad & Tobago or to/from the UK/Europe. An unaccompanied minor can't travel with a pet."],
+   ["Unaccompanied minor","Required for ages 5–13 (14+ fly as adults). $150 each way, nonstop flights only — no connections, no UK/Europe. Max 3 solo minors per flight. Check-in is in person at the counter (bring 3 physical copies of the UM form); a named adult drops off with a gate pass and is at pickup. Even on Blue Basic the child gets a carry-on."],
+   ["Check-in window","Online check-in opens 24 hrs before on jetblue.com / the app. Pets and unaccompanied minors must be finalized in person at the full-service counter. Airport cutoffs vary — arrive early."],
+   ["Change & cancellation","24-hr cancel without penalty if booked 7+ days before departure (full refund to original payment). BLUE, BLUE PLUS, BLUE EXTRA, EVENMORE, MINT: no change or cancellation fee — a cancel returns full value as a JetBlue travel credit valid 12 months (fare difference on changes); cash only with the paid 'refundable' add-on or a refundable fare. BLUE BASIC: no changes allowed; cancel before departure for a fee of $100 per person (North/Central America, Caribbean) or $200 (other routes), remainder as travel credit — forfeited if not cancelled before departure. Award tickets redeposit free."]
+ ]},
+ {code:"F9", name:"Frontier", region:"US · ultra-low-cost", updated:"May 2026", source:"flyfrontier.com — Bag Options, Family & Pets, Change & Cancel", facts:[
+   ["Personal item","One free on every fare, max 18 × 14 × 8 in — the ONLY free bag. Sized at boarding; oversize is charged on the spot."],
+   ["Carry-on","NOT free — paid on every standard fare (max 24 × 16 × 10 in, ≤35 lb). Dynamic price: cheapest at booking, highest at the gate. Included with Premium/Business bundles. Oddly, a pre-booked checked bag is often cheaper than a carry-on."],
+   ["Checked bags","Paid; dynamic pricing by route/timing (cheapest at booking). Weight limit is only 40 lb (lower than the usual 50). 41–50 lb +$75; 51–99.99 lb +$129 (bookings on/after Apr 4, 2026; +$100 before); 63–110 in oversize +$75. Over 100 lb / 110 in not accepted. Business bundle includes 2 checked bags."],
+   ["Pet in cabin","US domestic only — dogs, cats, rabbits, guinea pigs, hamsters and small household birds. No cargo. Fee $99 each way per pet, paid at booking or at the counter. ≥8 weeks; carrier under the seat (hard max 18×14×8, soft 18×14×11); not in row 1 or exit rows. International: service dogs only (Frontier has stopped taking new pets internationally). Pet fee refundable only if cancelled 24h+ before."],
+   ["Unaccompanied minor","Frontier does NOT offer an unaccompanied-minor service (discontinued Nov 1, 2018). A child under 15 must be on the same reservation as an accompanying adult who is at least 15. Ages 15–17 travel as regular adults — no service, no fee — on nonstop domestic flights."],
+   ["Check-in window","Online/app check-in opens 24 hrs before; the ticket counter closes 60 min before departure. Heads-up: Frontier charges for airport-agent help (up to $25) and even for website check-in — mobile-app check-in is free. Pets are finalized at the counter."],
+   ["Change & cancellation","Tickets are generally NON-refundable. Full cash refund to original payment ONLY if you cancel within 24 hrs of booking AND the flight is 7+ days away. After that a standard fare is non-refundable — cancel before departure and the value becomes a travel credit (forfeited on a no-show); changes carry a fee + fare difference. More flexibility comes only from buying a flexible bundle (e.g. Premium/Business) at booking. Frontier is all-economy with add-on bundles, not separate refundable cabins."]
+ ]},
+ {code:"WS", name:"WestJet", region:"Canada", updated:"Apr 2026", source:"westjet.com — Our Fares, Baggage, Service Fees & Pet policy", facts:[
+   ["Carry-on & personal item","Free carry-on (max 56 × 23 × 36 cm) + personal item (max 41 × 15 × 33 cm) on every fare EXCEPT UltraBasic. UltraBasic (basic) = personal item only on domestic/US routes — a carry-on is allowed only to/from Europe/Asia or if Extended Comfort is bought. Bring a carry-on to the gate on UltraBasic and you're charged a checked-bag fee + a gate service fee."],
+   ["Checked bags","UltraBasic & Econo pay; EconoFlex includes 1 free; Premium & Business include 2. Domestic/US 1st bag ≈ CA$45–53 prepaid Econo (≈ $55–65 UltraBasic), rising at the airport; 2nd ≈ $60+. Weight 23 kg / 157 cm (32 kg to Europe). Overweight/oversize ≈ $150–177, stackable."],
+   ["Pet in cabin","Cats, dogs, small birds and rabbits, ≥8 weeks; soft carrier max 41 × 21.5 × 25.4 cm under the seat (counts as your personal item). Fee CA$50–59 each way within/between Canada & US; CA$100–118 to other destinations. Book by phone ≥48 hrs ahead (can't add a pet online). Not on codeshare/partner flights, not to Hawaii/Barbados/Jamaica/Dublin/London/Glasgow, and no pets Dec 15–Jan 6. A pet can't travel with an unaccompanied minor."],
+   ["Unaccompanied minor","UM service is mandatory for ages 8–11 and optional for 12–17, on Canada-domestic nonstop flights only — no connections or international (those use the Guardian Fare Program, where an adult accompanies the child). Children under 8 must travel with someone 16+. Fee CAD $100 each way; max 4 UMs per flight; request via WestJet's online form. A UM can't travel with a pet or add a checked bag."],
+   ["Check-in window","Online check-in opens 24 hrs before on westjet.com / the app. Bag-drop/check-in typically closes 45 min domestic / 60 min US & international, and the gate ~40 min before — varies by airport."],
+   ["Change & cancellation","24-hr risk-free cancel (Canadian rule). ULTRABASIC (basic): NOT eligible for changes, cancellations or refunds — value forfeited after 24 hrs. ECONO: a cancellation fee applies, balance to Travel Bank (credit); changes carry the fare difference. ECONOFLEX: changes with no fee (fare difference), more flexible. PREMIUM & BUSINESS: a cancellation fee applies, balance to Travel Bank. PREMIUMFLEX & BUSINESSFLEX (and other refundable fares): fully refundable to original payment."]
+ ]},
+ {code:"AC", name:"Air Canada", region:"Canada · international", updated:"Apr 2026", source:"aircanada.com — Baggage & optional services, Pets, UM", facts:[
+   ["Carry-on & personal item","Carry-on (max 55 × 40 × 23 cm) + personal item (max 33 × 43 × 16 cm) free on all fares EXCEPT Economy Basic on North American routes. Since Jan 3, 2025, Basic = personal item only within Canada and to/from the US, Mexico, Central America and the Caribbean (bring a roller to the gate and you pay a fee). On long-haul international beyond North America, Basic KEEPS the carry-on + personal item."],
+   ["Checked bags","Economy Basic never includes a free checked bag on any route. North America (as of Apr 13, 2026): 1st $45, 2nd $60, 3rd $100. Other international: 1st ≈ $75. Weight 23 kg / 158 cm (32 kg Business). Overweight (23–32 kg) or oversize (158–292 cm) ≈ $100–115 — and AC charges only ONE fee if a bag is both. Economy Standard/Flex bundle a bag on some routes."],
+   ["Pet in cabin","Cats and dogs, in an under-seat carrier. Fee $50–60 each way within Canada or Canada–US (except Hawaii); $100–120 each way all other itineraries. On all fares except Basic the pet carrier is IN ADDITION to your carry-on + personal item; on Basic you get the pet carrier + one personal item. Register within 24 hrs of booking. Not on codeshare/partner-operated flights."],
+   ["Unaccompanied minor","Service fee $100–120 each way, per child, per flight. Required for children ages 8–11; optional for 12–17. Staff accompany the child from check-in through to destination. A named adult drops off and is at pickup."],
+   ["Check-in window","Online check-in opens 24 hrs before on aircanada.com / the app. Airport cutoffs are typically ~45 min domestic / ~60 min to the US / 60–90 min other international — arrive ~3 hrs early for international."],
+   ["Change & cancellation","24-hr risk-free cancel. ECONOMY BASIC: no changes and no refunds (value forfeited). ECONOMY STANDARD: changes with a fee + fare difference; little/no refund. ECONOMY FLEX: changeable with no change fee (fare difference); cancel for a partial credit. COMFORT: changeable, cancel with a smaller fee to credit. LATITUDE (Economy), Premium Economy Flexible and Business/Signature Flexible: fully refundable and changeable. Premium Economy Lowest is restricted."]
+ ]},
+ {code:"EK", name:"Emirates", region:"UAE · international", updated:"Feb 2026", source:"emirates.com — Baggage, Pets, Unaccompanied minors, Cancellation", facts:[
+   ["Carry-on","Economy: 1 cabin bag only, max 7 kg (55 × 38 × 20 cm) — Emirates does NOT give a separate personal item in Economy, so a laptop bag must fit inside your one piece. Premium Economy: 1 piece up to 10 kg. Business/First: 2 pieces (a 7 kg carry-on + a briefcase or garment bag). From India: 1 piece only (max 115 cm total)."],
+   ["Checked bags — WEIGHT concept (most routes)","Free allowance by fare/cabin, split across any number of bags (no single bag over 32 kg, max 203 cm): Economy Special 20 kg, Saver 25 kg (30 kg from AUS/NZ), Flex 30 kg, Flex Plus 35 kg; Premium Economy 35 kg; Business 40 kg; First 50 kg. Excess is charged per kg — much cheaper pre-purchased online."],
+   ["Checked bags — PIECE concept (Americas & Africa)","To/from the Americas and from Africa: Economy 2 × 23 kg (Economy Special only 1 × 23 kg), Premium Economy 2 × 23 kg, Business/First 2 × 32 kg — each bag max 150 cm. Extra bag ≈ $100–250; overweight or oversize ≈ $75 each ($150 if both)."],
+   ["Pet in cabin","NOT allowed — Emirates does not carry pets in the cabin (only falcons on Dubai–Pakistan). Pets travel as checked baggage in the hold or as cargo; the charge is based on the combined weight & size of the animal + cage. Arrange well in advance and submit paperwork (permits, vaccinations) at least a week before. Confirm route eligibility with Emirates."],
+   ["Unaccompanied minor","Children 5–11 travelling alone MUST use the UM service and pay a full adult fare (no separate service charge). Children 12–15 may travel alone without it, or you can add the service for USD 50 per leg. Under 5 must travel with an adult. Book the service at least 12 hrs before departure; a Declaration of Indemnity form and a named adult at drop-off and pickup are required. (Japan → Dubai UM is free.)"],
+   ["Check-in window","Online check-in opens ~48 hrs and closes ~90 min before departure; airport check-in typically closes 90 min before for international — arrive ~3 hrs early. Confirm the airport's cutoff."],
+   ["Change & cancellation","24-hr free cancel if the flight is 7+ days away. Fees are set by fare brand within each cabin and rise closer to departure: ECONOMY SPECIAL — most restrictive (large fee; value forfeited within ~4 hrs of departure or after); ECONOMY SAVER — restrictive; ECONOMY FLEX — moderate fee; ECONOMY FLEX PLUS — fully refundable up to departure. Business and First follow the same Saver / Flex / Flex Plus tiering (Business & First Flex Plus fully refundable). A no-show forfeits the fare on Special/Saver; statutory taxes are refundable on request."]
+ ]},
+ {code:"PC", name:"Pegasus", region:"Turkey · ultra-low-cost", updated:"Feb 2026", source:"flypgs.com — General Rules, Fees, Pets & Children", facts:[
+   ["Cabin & under-seat bag","Under-seat bag (max 40 × 30 × 15 cm, 3 kg) is included in EVERY package, even Light. A full cabin bag (max 55 × 40 × 23 cm, 8 kg) is included in Saver, Saver Plus and Comfort Flex — but NOT in the Light package on international/North Cyprus routes (Light = under-seat bag only since Feb 14, 2026). All domestic packages include the cabin bag."],
+   ["Checked bags","By package: Light includes none (international). Domestic Saver 15 kg; Saver Plus & Comfort Flex 20 kg. International: Saver / Saver Plus / Comfort Flex 20 kg. Add bags cheapest online — an extra/oversize piece at the gate runs ≈ €50 on international/North Cyprus. Domestic excess is per kilo; international excess is per piece."],
+   ["Pet in cabin","Cats, dogs and birds domestically; cats and dogs only on international. Pet + carrier ≤8 kg, carrier max 32 × 32 × 50 cm; fee ≈ 600 TRY. Heavier pets (8–15 kg / over 15 kg) go in the hold at higher fees. ≥3 months and vaccinated. Book via the call center. Banned breeds apply (pit bull, Rottweiler, Doberman, mastiff, etc.); no pets to the UK, UAE or Qatar. Not in the front or exit rows."],
+   ["Unaccompanied minor","Children ages 7–12 travelling alone must use the UM service; 13+ may travel alone. The fee is set by Pegasus and differs for domestic vs international routes (route-based — confirm the amount for the specific route). UM tickets CANNOT be booked on the app or website — only via the call center or a ticket office. An authorization form is signed at the airport; staff hand the child to the crew and to a named adult on arrival."],
+   ["Check-in window","Online check-in opens ~48 hrs and closes ~1 hr before departure; the airport counter typically closes ~45–60 min before — varies by airport."],
+   ["Change & cancellation","Rights depend on the package: LIGHT and SAVER are the most restrictive (often non-refundable; changes carry a fee + fare difference). SAVER PLUS is mid-tier. COMFORT FLEX is the flexible option with the easiest — often free — changes and refunds. There is no universal 24-hour free-cancel rule as in the US, so check the package's rules."]
+ ]},
+ {code:"AV", name:"Avianca", region:"Colombia · Latin America", updated:"Jan 2026", source:"avianca.com — Fares, Baggage, Pets, Contract of Carriage", facts:[
+   ["Carry-on & personal item","Personal item (max 45 × 35 × 25 cm) free on EVERY fare including Basic. A 10 kg carry-on (max 55 × 35 × 25 cm) is free on Classic, Flex and Business — and since Jan 27, 2026 also free on Basic for INTERNATIONAL flights. But Basic on domestic Colombia/Ecuador/Guatemala routes = personal item only (a gate carry-on gets checked for a fee)."],
+   ["Checked bags","Basic includes no free checked bag (1st ≈ $80 prepaid on US–South America, more at the airport). Classic & Flex include 1 × 23 kg; Business 2 × 32 kg. Piece concept within the Americas/US; weight concept to/from Europe & Brazil. Overweight/oversize ≈ $60–130 by route."],
+   ["Pet in cabin","Small dogs and cats, pet + carrier ≤10 kg, ≥4 months (≥2 months on domestic Colombia with vaccinations); soft carrier max 55 × 35 × 25 cm under the seat (counts as your carry-on). Fees by route: domestic Colombia ≈ COP 75,000–115,000 ($19–29); to/from North America from ≈ $160; to/from Europe ≈ $180–200. Reserve ≥48 hrs ahead — space is limited. Not in Business on the 787."],
+   ["Unaccompanied minor","Avianca's own guidance: passengers 14 and under must travel with a parent or a responsible adult (18+) who holds the parents' authorization. A UM service is described for solo travel (roughly ages 5–11, optional 12–17), arranged in advance, with a fee that varies by route. Rules differ by country and on codeshare/partner-operated flights — confirm the fee and eligibility for the specific route."],
+   ["Check-in window","Online check-in generally opens ~48 hrs and closes ~1 hr before departure; the airport counter typically closes ~1 hr international / ~45 min domestic — varies by airport."],
+   ["Change & cancellation","On itineraries to/from the US, the 24-hr free-cancel rule applies. Otherwise rights follow the fare brand: BASIC — most restrictive, typically non-changeable and non-refundable (value forfeited). CLASSIC — changes with a fee + fare difference; cancel to credit. FLEX — changes with no/low fee, the most flexible economy fare; cancel to credit or refund per rules. BUSINESS — depends on the fare sold (flexible Business fares are refundable). Cash refund only on a refundable fare."]
+ ]},
+ {code:"VY", name:"Vueling", region:"Spain · low-cost", updated:"Jul 2026", source:"vueling.com — Fares, Luggage, Special assistance", facts:[
+   ["Carry-on & personal item","Every fare includes one free under-seat personal item (max 40 × 30 × 20 cm, must fit under the seat). A full 55 × 40 × 20 cm / 10 kg overhead cabin bag is INCLUDED only on Fly Grande (Family) and TimeFlex — on the cheapest Fly Light / Fly (Basic / Optima) fares it's a paid add-on. Buy it online in advance: an undeclared oversize bag at the gate runs ≈ €60–75 (under-seat) or ≈ €110–140 (overhead)."],
+   ["Checked bags","Fly Light / Basic include none; add online from ≈ €10 (15 kg) / €14 (20 kg) / €18 (25 kg) — prices rise closer to departure and the airport counter (often 25 kg only) is far dearer (≈ €50–70). Fly Grande / Family include a checked bag. Max 32 kg and 158 cm per piece; excess ≈ €12 per extra kilo. Adding at booking is cheapest."],
+   ["Pet in cabin","Small cats and dogs are accepted in the cabin for a fee on eligible routes, in an under-seat carrier with a combined weight limit; book in advance and expect route exclusions. Confirm the current fee, weight/carrier limits and which routes allow pets."],
+   ["Unaccompanied minor","Vueling's UM handling is inconsistent across sources — some cite a service for ages 5–11 booked ≥48 h ahead, while Vueling generally expects younger children to travel with an adult (16+). Confirm current UM availability and the exact age rules with Vueling before booking a child to fly alone."],
+   ["Check-in window","Check in online (free); the airport desk opens ~2 h before and closes 40 min before departure for Schengen flights, 60 min for non-Schengen. Self-service kiosks exist only at a few airports (Barcelona, London Gatwick, Paris Orly)."],
+   ["Change & cancellation","24-hr free cancel if the flight is 7+ days away. After that, by fare: FLY LIGHT / FLY (Basic / Optima) are non-refundable — you can change the name, date or time for a fee + fare difference, but not get money back; adding the Flex Pack lets you cancel to flight credit up to 48 h before. TIMEFLEX allows changes without a change fee and cancels to flight credit. A cash refund applies only on a refundable / top flexible fare, minus transaction costs. All-economy — bundles, not cabins, set the rules."]
+ ]},
+ {code:"FR", name:"Ryanair", region:"Ireland/EU · ultra-low-cost", updated:"Jul 2026", source:"ryanair.com Help Centre — Bag Rules, Fees, Terms", facts:[
+   ["Carry-on & personal item","Every fare includes ONE free under-seat personal bag (max 40 × 30 × 20 cm — must fit the sizer). A larger 10 kg cabin bag (55 × 40 × 20 cm) for the overhead bin needs 'Priority & 2 Cabin Bags' (≈ €6–36 at booking, more later; capped ~95 seats/flight and often sold out) or a Regular / Flexi Plus fare. No airline status adds a free bag. Turn up non-Priority with a wheelie and it's refused or put in the hold for a gate fee of ≈ €70–75. Enforcement is strict — bags are sized at the gate."],
+   ["Checked bags","All paid extras: 10 kg or 20 kg (up to 3), or a 23 kg bag (1). Online ≈ €9.49–45 depending on route/date; adding later or at the airport costs more. Max 32 kg per bag (excess ≈ €11–13/kg); 20 kg bag max 80 × 120 × 120 cm. Sports gear/instruments go in the hold for a fee (bikes to 30 kg, most items to 20 kg) or need an extra seat. Add bags at booking, never at the gate."],
+   ["Pet in cabin","Ryanair does NOT carry pets — no cats or dogs in the cabin or the hold, on any route. Only trained assistance dogs are accepted, on eligible UK/Ireland (and a few other) routes, free and arranged in advance with Ryanair."],
+   ["Unaccompanied minor","Ryanair does NOT offer an unaccompanied-minor service. Passengers under 16 must travel with someone aged 16 or over on the same booking — a child cannot fly Ryanair alone."],
+   ["Check-in window","Online check-in is required (a Regular fare with a reserved seat can check in from 60 days out; otherwise from 24 h before). Checking in at the airport instead carries an airport check-in fee. Bag drop and boarding close 40 min before departure — Ryanair is unforgiving on late arrival."],
+   ["Change & cancellation","Fares are NON-refundable and there is no standard 24-hour free-cancel. A voluntary cancel returns only government taxes on request (minus an admin fee) — the fare itself is lost. Flight CHANGES cost a change fee + fare difference (date changes are free on a Flexi Plus fare). A full refund or free rebooking applies only if RYANAIR cancels or heavily delays your flight (EU261). All-economy — options are bought per fare/add-on, not by cabin."]
+ ]},
+ {code:"W6", name:"Wizz Air", region:"Hungary/EU · ultra-low-cost", updated:"Jul 2026", source:"wizzair.com — Baggage, WIZZ Priority, Fees", facts:[
+   ["Carry-on & personal item","Every fare includes ONE free under-seat bag — max 40 × 30 × 20 cm AND up to 10 kg (it has a weight limit, unusual for an under-seat bag). A larger 55 × 40 × 23 cm / 10 kg overhead trolley needs WIZZ Priority (≈ €10–60 online, more — ~€55 — at the airport; can't be bought without Priority). Non-Priority = one bag only; a second small bag must go inside it. A bag that fails the gate sizer goes in the hold for ≈ €65. No status adds a free bag."],
+   ["Checked bags","All paid: weight tiers of 10 / 20 / 26 / 32 kg, up to 6 pieces (3 online, the rest only at the airport at higher rates). Max 32 kg per bag; checked-bag max dimensions 149 × 119 × 171 cm; excess ≈ €13/kg. NO bag pooling between passengers. The WIZZ Go bundle adds a seat + 20 kg bag; WIZZ Plus adds priority, extra legroom, a 32 kg bag and a free date change. Cheapest online at booking."],
+   ["Pet in cabin","Wizz Air does NOT carry pets — no cats or dogs in the cabin or the hold, on any route. Only licensed assistance dogs are accepted, on limited routes, with ≥48 h notice and documentation."],
+   ["Unaccompanied minor","Wizz Air does NOT accept unaccompanied minors. The minimum age to fly alone is 14; anyone under 14 must travel with a passenger aged 16 or over."],
+   ["Check-in window","Online and app check-in are free; checking in at the airport carries a fee (≈ €30 per person). Have the boarding pass ready in the app; the airport bag drop/counter closes ~40 min before departure. Wizz flies direct routes with no through-checked bags or protected connections — separate Wizz flights are your own risk."],
+   ["Change & cancellation","Fares are NON-refundable and there is no standard 24-hour free-cancel. A voluntary cancel or change is subject to a fee (value may return as WIZZ credit); the WIZZ Flex add-on allows date changes. A refund or rebooking applies mainly if WIZZ cancels or heavily delays (EU261), often offered as ~120% WIZZ credit or 100% cash. All-economy — bundles and add-ons, not cabins, set the rules."]
+ ]},
+ {code:"TK", name:"Turkish Airlines", region:"Turkey · full-service", updated:"Jul 2026", source:"turkishairlines.com — Baggage, Pets, Fare Rules", facts:[
+   ["Carry-on & personal item","Economy: 1 cabin bag (55 × 40 × 23 cm, 8 kg) + 1 personal item (40 × 30 × 15 cm, 4 kg), free. Business: 2 cabin bags (8 kg each) + a personal item. Cabin bags are weighed — aim under 8 kg. The fare package (EcoFly / ExtraFly / PrimeFly) affects the checked allowance, not the cabin bag."],
+   ["Checked bags","Two systems by route. PIECE concept (to/from the US, Canada, much of Africa, South America, Japan, etc.): Economy 2 × 23 kg, Business 2 × 32 kg. WEIGHT concept (Europe/Middle East/Asia): Economy ~20–30 kg, Business ~40 kg — varies by route and fare package (an EcoFly fare may include little or no free checked bag). No single bag over 32 kg; max 158 cm (oversize 158–292 cm ≈ $90 intl); piece-route excess ≈ $80 per 23–32 kg piece. Buy extra online in advance; allowances can't be pooled across separate PNRs."],
+   ["Pet in cabin","Cats, dogs and small birds (parakeets, canaries) may travel in the cabin. Pet + carrier ≤8 kg; soft carrier max 23 (h) × 30 (w) × 40 (l) cm, under the seat. Snub-nosed breeds are cabin-only if they meet the size limits. Heavier pets go in the hold (pet + carrier ≤50 kg). Book in advance — a pet can't be added to an unaccompanied-minor booking, and pet space may be refused for operational reasons."],
+   ["Unaccompanied minor","Turkish offers a UM service — required for younger children and optional for older teens — arranged in advance. A pet cannot travel on a UM booking. Confirm the eligible ages and the current fee with Turkish before booking a child to fly alone."],
+   ["Check-in window","Online check-in generally opens 24 h before departure; the airport counter typically closes ~60 min before international flights (more at some airports). Miles&Smiles Classic Plus / Elite / Elite Plus get extra baggage across all fare packages."],
+   ["Change & cancellation","Rights follow the Economy fare package: ECOFLY is the most restrictive (changes and cancellation carry a fee and it's often non-refundable), EXTRAFLY is mid-tier, PRIMEFLY is the most flexible with the easiest changes and refunds; Business fares tier the same way. A cash refund applies on the more flexible/refundable packages; the 24-hour free-cancel rule applies on US-originating tickets. Confirm your package's exact fee."]
+ ]},
+ {code:"CM", name:"Copa Airlines", region:"Panama · Latin America", updated:"Jul 2026", source:"copa.com — Baggage, Pets, Fare families, DOT 24-hr", facts:[
+   ["Carry-on & personal item","Every fare, including Economy Basic, includes one free carry-on (56 × 36 × 26 cm, 10 kg) plus one free personal item that fits under the seat — same in Economy and Business. Gate agents at the Panama City (PTY) hub often weigh carry-ons, so keep yours under 10 kg."],
+   ["Checked bags","Piece concept, by fare: ECONOMY BASIC includes none (1st bag ≈ $30 online / $40 airport; 2nd ≈ $45–50). ECONOMY CLASSIC includes 1 × 23 kg; ECONOMY FULL and BUSINESS include 2 (23 kg economy / 32 kg business). Max 158 cm; overweight 24–32 kg ≈ $100, 33–45 kg ≈ $200, over 45 kg goes as cargo. ConnectMiles PreferMember / Star Alliance Gold add a free bag. Watch Dec–Jan embargoes on some routes (e.g. Cuba, Ecuador, El Salvador). Prepay online, cheapest."],
+   ["Pet in cabin","Small dogs and cats only — book through Copa's Reservation Center (not online), ≥48 h ahead, with only a few pet spots per flight. Pet + carrier ≤10 kg in a soft under-seat carrier (max ~46 × 28 × 28 cm); fee ≈ $150 domestic / $200 on select international routes. Not allowed in Business. Health certificate and rabies proof required; snub-nosed breeds and many hold routes are restricted."],
+   ["Unaccompanied minor","Copa offers a UM service — required for younger children and optional for older teens — arranged in advance for a per-segment fee. Confirm the eligible ages and current fee with Copa before booking a child to fly alone."],
+   ["Check-in window","Check in online from 24 h before; you can prepay bags online from 24 h to 3 h before departure at a discount. The airport counter typically closes ~60 min before international flights. PTY connections can be tight (40–60 min)."],
+   ["Change & cancellation","24-hr free cancel on US-originating tickets booked on copa.com. After that, by fare: ECONOMY BASIC is non-refundable with no changes; ECONOMY CLASSIC allows changes for a fee (≈ $75–150) + fare difference, with a travel credit if you cancel; ECONOMY FULL / Full Flex are fully refundable; Business tiers similarly. A cash refund applies only on the flexible/refundable fares."]
+ ]},
+ {code:"WN", name:"Southwest", region:"US", updated:"Apr 2026", source:"southwest.com — fare rules, UM T&Cs & Optional Travel Charges", facts:[
+   ["Carry-on & personal item","One carry-on (max 24 × 16 × 10 in) + one personal item, free on every fare including the cheapest. Size limit only, no published weight limit."],
+   ["Checked bags","'Bags Fly Free' ended May 28, 2025. Domestic base as of Apr 9, 2026: 1st ≈ $45, 2nd ≈ $55, 3rd $150 — per bag, per direction. Choice Extra fares and A-List Preferred get 2 free; A-List and Rapid Rewards cardmembers get the 1st free. Hawaii interisland differs."],
+   ["Overweight / oversize","51–70 lb +$100; 71–100 lb +$200; over 62 in +$200 (mainland routes)."],
+   ["Fare classes (renamed 2026)","Basic (was Wanna Get Away), Choice (was WGA Plus), Choice Preferred (was Anytime), Choice Extra (was Business Select). Open seating ended Jan 27, 2026 — seats are now assigned."],
+   ["Pet in cabin","Small vaccinated cats and dogs only (≥8 weeks), US domestic only — no international, no Hawaii except interisland (≈ $35). Carrier goes under the seat and counts as your personal item or carry-on; up to 2 same-species pets per carrier; 6 carriers per flight (cap) — book early by calling 1-800-I-FLY-SWA. Fee $125 each way ($35 wholly within Hawaii), paid by card at the counter, refundable if the flight is canceled. An unaccompanied minor can't travel with a pet."],
+   ["Unaccompanied minor","Required for ages 5–11 (12+ travel as adults). Nonstop or same-plane only — no plane-change connections, no international. Fee $100 each way (raised from $50 in 2023), refundable if the child doesn't travel. A named adult with photo ID drops off (gate 45 min early) and is at pickup."],
+   ["Check-in window","Online check-in opens 24 hrs before on southwest.com / the app. Bag-drop/check-in cutoff is typically ~45 min domestic (varies by airport); you must be at the gate at least 10 min before departure or you can lose the seat."],
+   ["Change & cancellation","No cancel fees on any fare, but cancel ≥10 min before departure or funds are forfeited. Within 24 hrs of booking: full refund on every fare. After that, by fare: BASIC — funds forfeited, NO credit (2026 change). CHOICE — 12-month Transferable Flight Credit. CHOICE PREFERRED and CHOICE EXTRA — refundable (unused funds returned). Free same-day change only on Choice / Choice Preferred / Choice Extra, not Basic."]
+ ]},
+ {code:"DL", name:"Delta", region:"US", updated:"Apr 2026", source:"delta.com + Delta Contract of Carriage", facts:[
+   ["Carry-on & personal item","One carry-on (max 22 × 14 × 9 in) + one personal item, free on all fares including the cheapest ('Main Basic'). A few Asia routes weight-limit the carry-on."],
+   ["Checked bags","Not free for most domestic. As of Apr 2026: 1st ≈ $45, 2nd ≈ $55, 3rd $200. Weight 50 lb economy / 70 lb Delta One & First. Many long-haul international Main Cabin fares include 1 free bag; short-haul international (Mexico, Caribbean, Canada) follow paid domestic rules."],
+   ["Overweight / oversize","51–70 lb +$100; 71–100 lb +$200; over 62 in +$200 (US/Canada)."],
+   ["Pet in cabin","Small dogs, cats, and (US-domestic only) household birds in an under-seat carrier. One-way fee at check-in: ≈ $150 within US/Canada/PR/USVI, ≈ $200 international/Brazil. Space is limited, first-come-first-served — must be booked by phone with Delta Reservations. Not to Hawaii or many international points; not in international Delta One/Business/First. The carrier counts as your carry-on."],
+   ["Unaccompanied minor","Required for ages 5–14; optional for 15–17 on request. $150 each way (one charge covers up to 4 siblings on one booking). No red-eye flights (9 PM–5 AM, over 2 hrs) and not on the last connection of the evening. A named adult must drop off and be at pickup."],
+   ["Check-in window","Online check-in opens 24 hrs before departure on delta.com / Fly Delta app. Airport & bag-drop cutoff is usually ~45 min domestic / ~60 min international, but varies by airport — confirm the specific airport."],
+   ["Change & cancellation","24-hr risk-free cancel on any fare (US-originating). Delta prices each cabin (Main, Comfort+, Premium Select, First, Delta One) at one of three 'experiences' that set the rules: BASIC — non-refundable and generally non-changeable after 24 hrs; cancel before departure for a fee (≈ $99 within US/Canada/Caribbean/Central America, higher long-haul) with the remainder as an eCredit; forfeited if not cancelled before departure. CLASSIC — no change fee on tickets originating in the US/Canada (fare difference applies); cancel for an eCredit (cash refund only on a refundable fare). EXTRA — most flexible, no change fee, cancel to eCredit. Refundable fares: full refund to original payment."]
+ ]},
+ {code:"AA", name:"American", region:"US", updated:"May 2026", source:"aa.com + American Airlines Newsroom", facts:[
+   ["Carry-on & personal item","One carry-on (max 22 × 14 × 9 in) + one personal item, free on ALL fares including Basic Economy (confirmed by American's own newsroom). Basic Economy boards last, so the carry-on may be gate-checked if bins fill."],
+   ["Checked bags","Domestic base as of May 18, 2026: 1st $50 ($45 online), 2nd $60 ($55 online), 3rd $200. Basic Economy pays $5 more per bag on the 1st and 2nd. International varies widely by region (transatlantic Basic 1st ≈ $85; many long-haul Main Cabin include 1 free bag; Australia/NZ gives 1 free even in Basic)."],
+   ["Overweight / oversize","50–53 lb +$30; 53–70 lb +$100; 70–100 lb +$200; 62–65 in +$30; 65–115 in +$200."],
+   ["Pet in cabin","Cats and small dogs only, ≥8 weeks, pet + carrier ≤20 lb, carrier stays under the seat. Fee $150 each way (paid at the airport, card only). The carrier is one on-board item, plus you may bring a personal item or a carry-on. Not allowed in-cabin to Hawaii, several South America countries (Brazil, Argentina, Chile, Uruguay, Venezuela) or on transatlantic flights. ESAs now travel as pets, not service animals."],
+   ["Unaccompanied minor","Required for ages 5–14; optional for 15–17 on request. $150 each way (plus tax) — one fee covers siblings on the same flight. Ages 5–7 nonstop only; 8+ may connect through AA hubs (CLT, DCA, DFW, JFK, LGA, LAX, MIA, ORD, PHL, PHX). Not on the last flight of the day, no partner/codeshare or overnight connections. Booked by phone; a named adult drops off and is at pickup, arriving ~2 hrs early."],
+   ["Check-in window","Online check-in opens 24 hrs before departure on aa.com / the app. Airport minimum check-in: at least 45 min domestic, 60 min international — some airports require earlier."],
+   ["Change & cancellation","24-hr cancel for a full refund on any fare (booked 2+ days before departure). BASIC ECONOMY: non-changeable and non-refundable after 24 hrs; AAdvantage members may cancel for Trip Credit minus a Basic Economy cancellation fee (≈ $99 domestic / $199 international) if US-originating and cancelled before the first flight — otherwise forfeited. MAIN CABIN (non-refundable): no change fee; cancel before departure for Trip Credit (fare difference on changes). PREMIUM ECONOMY / BUSINESS / FIRST: refundable only on a 'Flexible' / refundable fare bucket — otherwise Trip Credit. Refundable fares: full refund to original payment. Refundability depends on the fare bucket, not just the cabin."]
+ ]},
+ {code:"UA", name:"United", region:"US", updated:"Apr 2026", source:"united.com — Baggage & fees", facts:[
+   ["Personal item","Free on every fare, including domestic Basic Economy (max ≈ 17 × 10 × 9 in)."],
+   ["Carry-on — READ CAREFULLY","A full-size carry-on (max 22 × 14 × 9 in) is included on standard Economy and above, but NOT on domestic Basic Economy — that fare gets a personal item only. Bringing a carry-on to the gate on Basic costs ≈ $75 (bag fee + $25 gate handling). Exception: transatlantic, transpacific and South America Basic fares DO include a carry-on."],
+   ["Checked bags","Domestic base as of Apr 3, 2026: 1st $45 online / $50 airport, 2nd $55 / $60, 3rd ≈ $200. Prepaying 24h+ saves $5 (not to Canada). Basic Economy never includes a free checked bag, even long-haul."],
+   ["Overweight / oversize","51–70 lb +$100; 71–100 lb +$200; over 62 in +$200."],
+   ["Pet in cabin","Cats and dogs only, in an under-seat carrier. ≥2 months old domestic / ≥6 months international. One pet per person (two need a second adjacent seat). Fee $150 each way, paid at the counter (no miles/credits); +$125 if a layover exceeds 4 hrs domestic / 24 hrs international. Check in at the counter, not online. Not allowed in-cabin to many places (Hawaii, UK, Ireland, Australia and more) or in First/Business on 747/757/767/777. A pet can't travel with an unaccompanied minor."],
+   ["Unaccompanied minor","Required for ages 5–14. $150 each way covers up to 2 children; $300 for 3–4; $450 for 5–6. United's connection rules for minors are stricter than some carriers — confirm the routing is eligible when booking. A named adult drops off and is at pickup."],
+   ["Check-in window","Online check-in opens 24 hrs before departure on united.com / the app. Airport & bag-drop cutoff is generally ~45 min domestic / ~60 min international — varies by airport."],
+   ["Change & cancellation","24-hr flexible booking: any fare, incl. Basic Economy, fully refundable to cash if booked 7+ days before departure. BASIC ECONOMY: non-changeable (upgrade to Economy to change); after 24 hrs a voluntary cancel returns little value — at best a partial travel credit minus a fee on some international routes (≈ $99.50 one-way / $199 round-trip), often nothing domestically. ECONOMY, ECONOMY PLUS, PREMIUM PLUS, BUSINESS/POLARIS, FIRST: no change fee on paid tickets that are US domestic, US–Mexico/Caribbean, or international originating in the US (fare difference applies; other international and premium base fares can carry fees); a voluntary cancel becomes a full-value eCredit valid 12 months — not cash. Refundable fares: full cash refund. Award tickets redeposit free (no-show $125)."]
+ ]},
+ {code:"F8", name:"Flair", region:"Canada · ultra-low-cost", updated:"Jul 2026", source:"flyflair.com + Flair CTA Tariff", facts:[
+   ["Personal item","One free, max 15 × 33 × 43 cm (6 × 13 × 17 in), up to 7 kg — the only free allowance on the base fare. A bag sizer is used at the airport; anything larger is charged as a carry-on."],
+   ["Carry-on","NOT free on the base fare. Max 55 × 40 × 23 cm, up to 10 kg. Cheapest added at booking (≈ CA$49+), rising through check-in to the gate. Included with Lite / Plus / Pro bundles."],
+   ["Checked bags","Not included on the base fare; up to 5 bags. Over 158 cm adds a $99–$139 oversize fee. Price depends on route, fare and when it's bought."],
+   ["Medical devices","CPAP machines and portable oxygen concentrators are permitted with prior notice."],
+   ["Pet in cabin","Small dogs and cats only, ≥12 weeks; pet + carrier ≤10 kg (≈ 22 lb); soft carrier max 41 × 23 × 25 cm. Canada-domestic only — Flair does NOT carry pets in-cabin on US or international flights, and none in the hold/cargo. Fee ≈ $79+tax in advance / $99+tax at the airport, per animal. Add ≥48 hrs before departure (a Contact Centre fee applies if booked by phone); max 6 pets per flight; the carrier counts as one carry-on item. Can't travel with an unaccompanied minor or in exit/bulkhead rows."],
+   ["Unaccompanied minor","Flair offers NO supervised unaccompanied-minor service. Children under 12 must travel with an adult. Ages 12–17 may fly alone on NONSTOP flights only (booked as adults); for flights to/from the US, Mexico, the Dominican Republic or Jamaica the minimum solo age is 16. A named adult drops off and picks up."],
+   ["Check-in window","Online check-in opens 24 hrs and typically closes ~60 min before departure; airport bag-drop generally closes ~45 min and the gate ~20 min before — confirm the specific airport's cutoff."],
+   ["Change & cancellation","24-hr risk-free cancel for a full refund, if booked 24h+ before departure (Canadian rule). After that it depends on the bundle: the base/standard fare is largely non-refundable (a travel credit may apply, or the value is forfeited on a no-show); changes carry a fee + fare difference. The FLEX bundle is the flexible option — fully refundable up to 2 hrs before departure. Flair is all-economy, so these bundles (not cabins) set the rules."]
+ ]}
+];
+
+/* ============================================================
+   ELEMENTS + MODE
+   ============================================================ */
+const el = id => document.getElementById(id);
+let mode = "find";
+el("mFind").onclick = () => setMode("find");
+el("mClean").onclick = () => setMode("clean");
+el("mAI").onclick = () => setMode("ai");
+function setMode(m){
+  mode = m;
+  el("mFind").classList.toggle("on", m==="find");
+  el("mClean").classList.toggle("on", m==="clean");
+  el("mAI").classList.toggle("on", m==="ai");
+  el("findWrap").style.display = m==="find" ? "block":"none";
+  el("cleanWrap").style.display = m==="clean" ? "block":"none";
+  el("aiWrap").style.display = m==="ai" ? "block":"none";
+  el("outHd").textContent = m==="find" ? "Suggested reply" : (m==="clean" ? "Cleaned draft" : "AI draft");
+}
+
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function markPh(s){return esc(s).replace(/「([^」]*)」/g,'<span class="ph">「$1」</span>').replace(/\n/g,"<br>");}
+function copyBtn(text,label){
+  const b=document.createElement("button");b.className="copy";b.textContent="📋 "+(label||"Copy");
+  b.onclick=e=>{e.stopPropagation();navigator.clipboard.writeText(text).then(()=>{b.classList.add("done");b.textContent="✓ Copied";setTimeout(()=>{b.classList.remove("done");b.textContent="📋 "+(label||"Copy");},1500);});};
+  return b;
+}
+function curBrand(){ return (el("brand") && el("brand").value) || "Camli"; }
+function brandize(s){ const b=curBrand(); return (s||"").split("{BRAND}").join(b).split("Camli").join(b); }
+
+/* ============================================================
+   AI DRAFT (optional) — masks PII in the browser, then calls
+   your Groq proxy. Nothing is sent until the agent previews it.
+   ============================================================ */
+function maskPII(t){
+  let s = t || "";
+  s = s.replace(/^.*\b(has (joined|left)|has requested|has rated|added tag|sent a chat|rated the chat)\b.*$/gim,"");
+  s = s.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,"[EMAIL]");
+  s = s.replace(/\b(?:\d[ -]?){13,19}\b/g,"[CARD]");
+  s = s.replace(/\b(cvv|cvc|security code)\s*:?\s*\d{3,4}\b/gi,"$1 [REDACTED]");
+  s = s.replace(/\bexp(?:iry|iration)?\.?\s*:?\s*\d{1,2}\s*\/\s*\d{2,4}\b/gi,"exp [REDACTED]");
+  s = s.replace(/\bCTD[A-Z]{0,4}\d{3,}\b/gi,"[BOOKING]");
+  s = s.replace(/\b\d{12,14}\b/g,"[TICKET]");
+  s = s.replace(/(?:\+?\d[\s().:-]?){10,}\d/g,"[PHONE]");
+  s = s.replace(/^[A-Za-z][A-Za-z.'’-]*(?:\s+[A-Za-z][A-Za-z.'’-]*)*\s*(?=\d{1,2}:\d{2}\s*[AP]?\.?M?\b)/gim,"");
+  s = s.replace(/\n{3,}/g,"\n\n").trim();
+  return s;
+}
+
+function buildSystemPrompt(brand){
+  const b = brand==="Camli" ? "Camli" : "CheapTicketsDeal";
+  return [
+"You draft ONE chat reply for a human agent at "+b+", a US IATA-accredited flight consolidator. The agent reviews and sends it; you never speak to the customer.",
+"Voice: warm, human, professional, concise. Match the customer's language. One to four short paragraphs.",
+"Answer the question fully and honestly first. Only if there is real travel intent, add one natural line moving toward a booking.",
+"ABSOLUTE HONESTY RULES:",
+"- NEVER invent a fee, tax, penalty, baggage allowance, pet policy, fare rule, or cancellation term. If a specific number or policy is not present in the transcript, either write a 'let me confirm that for you' line, or insert a placeholder in the EXACT form 「VERIFY: what to look up」 using those brackets.",
+"- NEVER invent scarcity (e.g. 'only 3 seats left', 'selling fast'), discounts, or competitor prices.",
+"- NEVER call a booking confirmed or guaranteed unless the transcript shows it is already ticketed; otherwise say it is being processed and give an honest timeframe (use a placeholder if unknown).",
+"- NEVER ask for a card number, CVV, or expiry in chat.",
+"- If the customer booked directly with the airline, say so honestly and point them to the airline.",
+"You may see tokens like [EMAIL], [PHONE], [CARD], [BOOKING], [TICKET]. Personal data was removed on purpose — do not ask the customer to repeat it.",
+"Respond with ONLY a JSON object, no markdown, no backticks:",
+'{"chat_type":"policy_info|price_shop|ready_to_book|post_booking_service|booking_status|complaint|legitimacy_doubt|other","reply":"the reply text, use \\n for line breaks and 「VERIFY: ...」 for anything unverified","needs_verification":["specific things the agent must confirm before sending"],"sales_pivot":"one honest line toward a booking, or empty string","guardrail_notes":["anything risky you avoided"]}'
+  ].join("\n");
+}
+
+el("aiPrevBtn").onclick = ()=>{
+  const t = el("aitext").value.trim();
+  if(!t){ el("aitext").focus(); return; }
+  el("aisend").value = maskPII(t);
+  el("aiSendZone").style.display = "block";
+  el("aisend").scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+
+el("aiSendBtn").onclick = aiDraft;
+async function aiDraft(){
+  const masked = el("aisend").value.trim();
+  const intent = el("aiintent").value.trim();
+  const brand = el("brand").value;
+  const out = el("out");
+  if(!masked){ el("aisend").focus(); return; }
+  if(!PROXY_URL){
+    out.innerHTML = '<div class="flag amber"><span class="ic">✎</span><div>AI mode needs your Groq proxy. Paste your Cloudflare Worker URL into <b>PROXY_URL</b> near the top of this file, then reload. Until then, <b>Find the reply</b> works with no setup.</div></div>';
+    return;
+  }
+  const btn = el("aiSendBtn"); btn.disabled=true; btn.textContent="Drafting…";
+  out.innerHTML = '<div class="empty">Drafting…</div>';
+  const user = "TRANSCRIPT (personal details masked):\n"+masked+"\n\nAGENT INTENT: "+(intent||"(none — pick the best next reply)");
+  try{
+    const res = await fetch(PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({messages:[{role:"system",content:buildSystemPrompt(brand)},{role:"user",content:user}]})});
+    const data = await res.json();
+    let text="";
+    if(data.choices && data.choices[0] && data.choices[0].message) text = data.choices[0].message.content||"";
+    else if(data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    text = text.replace(/```json/gi,"").replace(/```/g,"").trim();
+    let p; try{ p = JSON.parse(text); }catch(e){ p = {chat_type:"other",reply:text||"(No reply returned — try again.)",needs_verification:[],sales_pivot:"",guardrail_notes:[]}; }
+    renderAI(p, masked);
+  }catch(err){
+    out.innerHTML = '<div class="flag red"><span class="ic">!</span><div>Couldn\'t reach the AI. Check the Worker URL and that your Groq key is set as a secret.<br><span style="opacity:.7">'+esc(err.message||String(err))+'</span></div></div>';
+  }finally{ btn.disabled=false; btn.textContent="Draft with Groq AI"; }
+}
+
+function renderAI(p, scanText){
+  const out=el("out"); out.innerHTML="";
+  const TYPES={policy_info:"Policy & info",price_shop:"Price shopping",ready_to_book:"Ready to book",post_booking_service:"After booking",booking_status:"Booking status",complaint:"Complaint",legitimacy_doubt:"Trust",other:"General"};
+  if(p.chat_type){const bd=document.createElement("div");bd.className="badges";bd.innerHTML='<span class="badge type">'+esc(TYPES[p.chat_type]||"General")+'</span>';out.appendChild(bd);}
+  const box=document.createElement("div");box.className="tpl";box.innerHTML='<div class="body">'+markPh(p.reply||"")+'</div>';box.appendChild(copyBtn(p.reply||"","Copy reply"));out.appendChild(box);
+  if(Array.isArray(p.needs_verification)&&p.needs_verification.length){
+    const sh=document.createElement("div");sh.className="subhead";sh.textContent="Confirm before sending";out.appendChild(sh);
+    const rail=document.createElement("div");rail.className="rail";
+    p.needs_verification.forEach(v=>{const d=document.createElement("div");d.className="flag amber";d.innerHTML='<span class="ic">◆</span><div>'+esc(v)+'</div>';rail.appendChild(d);});
+    out.appendChild(rail);
+  }
+  if(p.sales_pivot && p.sales_pivot.trim()){
+    const sh=document.createElement("div");sh.className="subhead";sh.textContent="Sales angle";out.appendChild(sh);
+    const d=document.createElement("div");d.className="flag good";d.innerHTML='<span class="ic">→</span><div>'+esc(p.sales_pivot)+'</div>';out.appendChild(d);
+  }
+  if(Array.isArray(p.guardrail_notes)&&p.guardrail_notes.length){
+    const sh=document.createElement("div");sh.className="subhead";sh.textContent="AI honesty notes";out.appendChild(sh);
+    const rail=document.createElement("div");rail.className="rail";
+    p.guardrail_notes.forEach(n=>{const d=document.createElement("div");d.className="flag amber";d.innerHTML='<span class="ic">✎</span><div>'+esc(n)+'</div>';rail.appendChild(d);});
+    out.appendChild(rail);
+  }
+  renderFlags(out, (scanText||"").toLowerCase());
+}
+
+/* ============================================================
+   FIND THE REPLY
+   ============================================================ */
+el("findBtn").onclick = findReply;
+function findReply(){
+  const text = el("transcript").value.trim();
+  if(!text){el("transcript").focus();return;}
+  const low = text.toLowerCase();
+  const tail = low.slice(-280);
+
+  const scored = TEMPLATES.map(t=>{
+    let s=0;
+    t.triggers.forEach(rx=>{ if(rx.test(low)){ s+=2; if(rx.test(tail)) s+=1; } });
+    return {t,s};
+  }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+
+  const out = el("out"); out.innerHTML="";
+
+  // type badge from top match category
+  if(scored.length){
+    const badges=document.createElement("div");badges.className="badges";
+    badges.innerHTML='<span class="badge type">'+esc(scored[0].t.cat)+'</span>';
+    out.appendChild(badges);
+  }
+
+  if(!scored.length){
+    const d=document.createElement("div");d.className="flag good";
+    d.innerHTML='<span class="ic">◆</span><div>No specific template matched. Answer in your own words — and remember: confirm any fee or policy before stating it. Browse the full library below for a starting point.</div>';
+    out.appendChild(d);
+  }else{
+    scored.slice(0,3).forEach(({t})=>{
+      const card=document.createElement("div");card.className="tpl";
+      card.innerHTML='<h4>'+esc(t.title)+'</h4><div class="body">'+markPh(brandize(t.body))+'</div>';
+      card.appendChild(copyBtn(brandize(t.body),"Copy answer"));
+      out.appendChild(card);
+    });
+  }
+
+  renderFlags(out, low);
+}
+
+/* ============================================================
+   CLEAN MY DRAFT
+   ============================================================ */
+const TYPOS = {"teh":"the","adn":"and","recieve":"receive","recieved":"received","seperate":"separate","seperated":"separated","occured":"occurred","untill":"until","wich":"which","thier":"their","alot":"a lot","definately":"definitely","accomodate":"accommodate","accomodation":"accommodation","begining":"beginning","beleive":"believe","calender":"calendar","cancelation":"cancellation","confirmaton":"confirmation","embarass":"embarrass","enviroment":"environment","garuntee":"guarantee","garunteed":"guaranteed","goverment":"government","independant":"independent","neccessary":"necessary","noticable":"noticeable","occassion":"occasion","posession":"possession","reccomend":"recommend","refered":"referred","succesful":"successful","tommorow":"tomorrow","truely":"truly","unfortunatly":"unfortunately","wether":"whether","passeneger":"passenger","passenger's":"passenger's","booking'":"booking","psswenger":"passenger","perosnal":"personal","checkeg":"checked","diuscounted":"discounted"};
+const PHRASE_FIX = [[/\byour welcome\b/gi,"you're welcome"],[/\bbare with (me|us)\b/gi,"bear with $1"],[/\bplz\b/gi,"please"],[/\bpls\b/gi,"please"],[/\bthankyou\b/gi,"thank you"],[/\bi'?m\b/g,"I'm"]];
+
+el("cleanBtn").onclick = cleanDraft;
+function cleanDraft(){
+  const raw = el("mydraft").value;
+  if(!raw.trim()){el("mydraft").focus();return;}
+  let s = raw;
+
+  // protect placeholders
+  const holders=[]; s=s.replace(/「[^」]*」/g,m=>{holders.push(m);return "\u0000"+(holders.length-1)+"\u0000";});
+
+  s = s.replace(/[ \t]+/g," ").replace(/ *\n */g,"\n").replace(/\n{3,}/g,"\n\n").trim();
+  // typo dictionary (word-boundary, keep case for capitalized)
+  s = s.replace(/\b[a-zA-Z']+\b/g,w=>{
+    const low=w.toLowerCase(); if(TYPOS[low]){const f=TYPOS[low];return /^[A-Z]/.test(w)?f.charAt(0).toUpperCase()+f.slice(1):f;} return w;
+  });
+  PHRASE_FIX.forEach(([rx,rep])=> s=s.replace(rx,rep));
+  // standalone i -> I
+  s = s.replace(/\bi\b/g,"I");
+  // capitalize sentence starts
+  s = s.replace(/(^|[.!?]\s+)([a-z])/g,(m,p,c)=>p+c.toUpperCase());
+  // ensure terminal punctuation
+  if(!/[.!?…]$/.test(s.trim()) && s.trim().length) s=s.trim()+".";
+  // restore placeholders
+  s = s.replace(/\u0000(\d+)\u0000/g,(m,i)=>holders[+i]);
+
+  const out=el("out"); out.innerHTML="";
+  const box=document.createElement("div");box.className="clean-out";box.innerHTML=markPh(s);
+  out.appendChild(box);
+  out.appendChild(copyBtn(s,"Copy cleaned reply"));
+  renderFlags(out, raw.toLowerCase(), true);
+}
+
+/* ============================================================
+   SHARED: guardrail flags
+   ============================================================ */
+function renderFlags(container, low, isDraft){
+  const hits = RULES.filter(r=>r.test.test(low));
+  const sub=document.createElement("div");sub.className="subhead";
+  sub.textContent = isDraft ? "Honesty check on your draft" : "Before you send";
+  container.appendChild(sub);
+  const rail=document.createElement("div");rail.className="rail";
+  if(!hits.length){
+    rail.innerHTML='<div class="flag good"><span class="ic">✓</span><div>Nothing risky flagged. Still double-check any number is one you actually verified.</div></div>';
+  }else{
+    hits.forEach(f=>{ const d=document.createElement("div");d.className="flag "+f.level;d.innerHTML='<span class="ic">'+f.ic+'</span><div>'+esc(f.msg)+'</div>';rail.appendChild(d); });
+  }
+  container.appendChild(rail);
+}
+
+/* ============================================================
+   LIBRARY (grouped)
+   ============================================================ */
+(function(){})();
+function buildLibrary(){
+  const wrap=el("library"); wrap.innerHTML="";
+  const cats=[...new Set(TEMPLATES.map(t=>t.cat))];
+  cats.forEach(cat=>{
+    const cl=document.createElement("div");cl.className="cat-label";cl.textContent=cat;wrap.appendChild(cl);
+    TEMPLATES.filter(t=>t.cat===cat).forEach(t=>{
+      const d=document.createElement("div");d.className="lib-item";
+      d.innerHTML='<div class="lib-q">'+esc(t.title)+'<span style="color:var(--cream-dim);font-family:var(--mono)">▾</span></div><div class="lib-a">'+markPh(brandize(t.body))+'</div>';
+      const q=d.querySelector(".lib-q"),a=d.querySelector(".lib-a");
+      q.onclick=()=>{a.classList.toggle("open");if(a.classList.contains("open")&&!a.querySelector(".copy"))a.appendChild(copyBtn(brandize(t.body)));};
+      wrap.appendChild(d);
+    });
+  });
+}
+buildLibrary();
+el("brand").addEventListener("change",()=>{ buildLibrary(); if(mode==="find" && el("transcript").value.trim()) findReply(); });
+
+/* ============================================================
+   AIRLINE POLICY REFERENCE
+   ============================================================ */
+(function(){
+  const sel=el("airlineSel");
+  AIRLINE_KB.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(a=>{
+    const o=document.createElement("option");o.value=a.code;o.textContent=a.name+" ("+a.region+")";sel.appendChild(o);
+  });
+  sel.onchange=()=>{
+    const a=AIRLINE_KB.find(x=>x.code===sel.value);
+    const box=el("airlineCard"); box.innerHTML="";
+    if(!a) return;
+    let html='<div class="badges"><span class="badge type">'+esc(a.name)+'</span><span class="badge">Updated '+esc(a.updated)+'</span></div><div class="akb">';
+    let plain=a.name+" — policy reference (updated "+a.updated+")\n";
+    a.facts.forEach(f=>{
+      html+='<div class="akb-row"><div class="akb-t">'+esc(f[0])+'</div><div class="akb-d">'+esc(f[1])+'</div></div>';
+      plain+="\n"+f[0]+": "+f[1]+"\n";
+    });
+    html+='</div><div class="hint" style="margin-top:6px">Source: '+esc(a.source)+' · Confirm exact per-route fees in the GDS before quoting.</div>';
+    plain+="\nSource: "+a.source+". Confirm exact per-route fees in the GDS.";
+    box.innerHTML=html;
+    box.appendChild(copyBtn(plain,"Copy reference"));
+  };
+})();
+
+/* ============================================================
+   GDS FORMATTER
+   ============================================================ */
+el("fmtBtn").onclick=()=>{
+  const lines=el("gdsIn").value.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  const out=el("gdsOut");out.innerHTML="";
+  lines.forEach(line=>{
+    const p=parseSeg(line);const c=document.createElement("div");c.className="seg-card";
+    c.innerHTML = p?('<div class="r">'+esc(p.route)+'</div><div class="m">'+esc(p.meta)+'</div>'):('<div class="m">Couldn\'t parse — '+esc(line)+'</div>');
+    out.appendChild(c);
+  });
+};
+function parseSeg(raw){
+  let s=raw.replace(/\s+/g," ").trim();
+  const fl=s.match(/\b([A-Z]{2})[- ]?(\d{1,4})\b/);
+  const date=s.match(/\b(\d{1,2}[A-Z]{3})\b/);
+  let o,d;const route=s.match(/\b([A-Z]{3})[- ]([A-Z]{3})\b/);
+  if(route){o=route[1];d=route[2];}else{const six=s.match(/\b([A-Z]{3})([A-Z]{3})\b/);if(six){o=six[1];d=six[2];}}
+  const times=s.match(/\b(\d{1,2}:?\d{2}\s?[AP]?M?)\b/gi)||[];
+  if(!fl||!o||!d)return null;
+  const air=AIRLINES[fl[1]]||fl[1];
+  const oc=AIRPORTS[o]?AIRPORTS[o]+" ("+o+")":o;
+  const dc=AIRPORTS[d]?AIRPORTS[d]+" ("+d+")":d;
+  const dt=date?fmtDate(date[1]):"";
+  const t1=times[0]?fmtTime(times[0]):"",t2=times[1]?fmtTime(times[1]):"";
+  return {route:oc+"  →  "+dc, meta:[air+" "+fl[2],dt,(t1&&t2)?(t1+" – "+t2):(t1||"")].filter(Boolean).join("  ·  ")};
+}
+function fmtDate(d){const m=d.match(/(\d{1,2})([A-Z]{3})/);if(!m)return d;const mo={JAN:"Jan",FEB:"Feb",MAR:"Mar",APR:"Apr",MAY:"May",JUN:"Jun",JUL:"Jul",AUG:"Aug",SEP:"Sep",OCT:"Oct",NOV:"Nov",DEC:"Dec"};return (mo[m[2]]||m[2])+" "+parseInt(m[1],10);}
+function fmtTime(t){t=t.replace(/\s/g,"").toUpperCase();let ap="";if(/[AP]M?$/.test(t)){ap=t.match(/[AP]/)[0]+"M";t=t.replace(/[AP]M?$/,"");}t=t.replace(":","");if(t.length<=2)return t+ap;const mins=t.slice(-2),hrs=t.slice(0,-2);return hrs+":"+mins+(ap?(" "+ap):"");}
+</script>
+</body>
+</html>
